@@ -5,7 +5,7 @@ import { useState } from "react";
 type Team = { id: string; name: string; code: string; group: string };
 type Match = {
   id: string;
-  matchDate: string;
+  matchDate: Date;
   isFinished: boolean;
   homeScore: number | null;
   awayScore: number | null;
