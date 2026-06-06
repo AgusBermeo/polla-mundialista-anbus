@@ -22,8 +22,7 @@ export default async function DashboardLayout({
         <div className="max-w-5xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-6">
             <div className="flex items-center gap-2">
-              <img src="/anbu-logo.png" alt="Anbus" width={50} height={50} />
-              <span className="text-2xl">⚽</span>
+              <img className="object-contain" src="/anbu-logo.png" alt="Anbus" width={20} height={50} />
               <span className="font-bold text-lg text-cyan-700">Polla Mundial 2026</span>
             </div>
             <div className="hidden md:flex items-center gap-6">
