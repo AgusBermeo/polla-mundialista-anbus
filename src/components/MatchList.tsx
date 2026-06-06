@@ -38,7 +38,7 @@ export default function MatchList({
             onClick={() => setActiveGroup(group)}
             className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
               activeGroup === group
-                ? "bg-blue-600 text-white"
+                ? "bg-cyan-700 text-white"
                 : "bg-white border border-gray-200 text-gray-600 hover:bg-gray-50"
             }`}
           >
@@ -105,7 +105,7 @@ function MatchCard({
         </div>
 
         {/* Equipos y marcador */}
-        <div className="flex items-center gap-3 flex-1 justify-center">
+        <div className="flex items-center gap-3 flex-1 justify-center text-gray-600">
           <span className="font-medium text-right w-28 truncate">{match.homeTeam.name}</span>
 
           <div className="flex items-center gap-1">
@@ -116,7 +116,7 @@ function MatchCard({
               value={home}
               onChange={(e) => { setHome(e.target.value); setSaved(false); }}
               disabled={isPast || match.isFinished}
-              className="w-10 h-10 text-center border rounded-lg font-bold text-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+              className="w-10 h-10 text-center border rounded-lg font-bold text-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 disabled:bg-gray-100"
             />
             <span className="text-gray-400 font-bold">-</span>
             <input
@@ -126,7 +126,7 @@ function MatchCard({
               value={away}
               onChange={(e) => { setAway(e.target.value); setSaved(false); }}
               disabled={isPast || match.isFinished}
-              className="w-10 h-10 text-center border rounded-lg font-bold text-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+              className="w-10 h-10 text-center border rounded-lg font-bold text-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 disabled:bg-gray-100"
             />
           </div>
 
@@ -146,7 +146,7 @@ function MatchCard({
               className={`text-xs px-3 py-1.5 rounded-lg font-medium transition-colors disabled:opacity-40 ${
                 saved
                   ? "bg-green-100 text-green-700"
-                  : "bg-blue-600 text-white hover:bg-blue-700"
+                  : "bg-cyan-600 text-white hover:bg-cyan-700"
               }`}
             >
               {saving ? "..." : saved ? "✓ Guardado" : "Guardar"}
