@@ -47,7 +47,7 @@ export default async function DashboardPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold">
+      <h1 className="text-2xl font-bold text-cyan-700">
         Bienvenido, {dbUser?.name || dbUser?.email} 👋
       </h1>
       <p className="text-gray-500 mt-1 mb-8">

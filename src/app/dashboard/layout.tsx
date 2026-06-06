@@ -23,7 +23,7 @@ export default async function DashboardLayout({
           <div className="flex items-center gap-6">
             <div className="flex items-center gap-2">
               <span className="text-2xl">⚽</span>
-              <span className="font-bold text-lg">Polla Mundial 2026</span>
+              <span className="font-bold text-lg text-cyan-700">Polla Mundial 2026</span>
             </div>
             <div className="hidden md:flex items-center gap-6">
               <a href="/dashboard" className="text-sm text-gray-600 hover:text-gray-900">Inicio</a>
@@ -31,14 +31,14 @@ export default async function DashboardLayout({
               <a href="/dashboard/leaderboard" className="text-sm text-gray-600 hover:text-gray-900">Posiciones</a>
               <a href="/dashboard/profile" className="text-sm text-gray-600 hover:text-gray-900">Mi perfil</a>
               {dbUser?.isAdmin && (
-                <a href="/dashboard/admin" className="text-sm text-red-500 hover:text-red-700 font-medium">
+                <a href="/dashboard/admin" className="text-sm text-cyan-700 hover:text-cyan-900 font-medium">
                   Admin
                 </a>
               )}
             </div>
           </div>
           <div className="flex items-center gap-4">
-            <span className="text-sm text-gray-500">{user.email}</span>
+            <span className="text-sm text-cyan-700 font-medium">{dbUser?.name}</span>
             <LogoutButton />
           </div>
         </div>
