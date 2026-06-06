@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { PrismaClient } from "@prisma/client";
+import { redirect } from "next/navigation";
 import LogoutButton from "@/components/LogoutButton";
 
 const prisma = new PrismaClient();
