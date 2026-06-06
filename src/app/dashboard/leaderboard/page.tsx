@@ -23,7 +23,7 @@ export default async function LeaderboardPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-6">Tabla de posiciones</h1>
+      <h1 className="text-2xl font-bold mb-6 text-cyan-700">Tabla de posiciones</h1>
 
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
         <table className="w-full">
@@ -47,13 +47,12 @@ export default async function LeaderboardPage() {
                   {index === 0 ? "🥇" : index === 1 ? "🥈" : index === 2 ? "🥉" : index + 1}
                 </td>
                 <td className="px-6 py-4">
-                  <div className="font-medium text-sm">
+                  <div className="font-medium text-sm text-gray-600">
                     {entry.name}
                     {entry.id === user?.id && (
                       <span className="ml-2 text-xs text-blue-500 font-normal">(tú)</span>
                     )}
                   </div>
-                  <div className="text-xs text-gray-400">{entry.email}</div>
                 </td>
                 <td className="px-6 py-4 text-center text-sm text-gray-600">
                   {entry.totalPredictions}
