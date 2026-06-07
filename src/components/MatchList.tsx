@@ -106,7 +106,7 @@ function MatchCard({
 
         {/* Equipos y marcador */}
         <div className="flex items-center gap-3 flex-1 justify-center text-gray-600">
-          <span className="font-medium text-right w-28 truncate">{match.homeTeam.name}</span>
+          <span className="font-medium text-right w-28">{match.homeTeam.name}</span>
 
           <div className="flex items-center gap-1">
             <input

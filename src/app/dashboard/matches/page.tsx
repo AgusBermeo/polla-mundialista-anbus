@@ -34,7 +34,7 @@ export default async function MatchesPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-6">Pronósticos</h1>
+      <h1 className="text-2xl font-bold mb-6 text-cyan-700">Pronósticos</h1>
       <MatchList
         matchesByGroup={matchesByGroup}
         predictionsMap={predictionsMap}
