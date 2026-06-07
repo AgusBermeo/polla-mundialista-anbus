@@ -1,8 +1,7 @@
+import { prisma } from "@/lib/prisma";
 import { createClient } from "@/lib/supabase/server";
 import MatchList from "@/components/MatchList";
-import { PrismaClient } from "@prisma/client";
 
-const prisma = new PrismaClient();
 
 export default async function MatchesPage() {
   const supabase = await createClient();

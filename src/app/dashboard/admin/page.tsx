@@ -1,9 +1,8 @@
+import { prisma } from "@/lib/prisma";
 import { createClient } from "@/lib/supabase/server";
-import { PrismaClient } from "@prisma/client";
 import { redirect } from "next/navigation";
 import AdminMatchList from "@/components/AdminMatchList";
 
-const prisma = new PrismaClient();
 
 export default async function AdminPage() {
   const supabase = await createClient();

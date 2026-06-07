@@ -1,7 +1,6 @@
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
 import { createClient } from "@/lib/supabase/server";
 
-const prisma = new PrismaClient();
 
 export default async function LeaderboardPage() {
   const supabase = await createClient();

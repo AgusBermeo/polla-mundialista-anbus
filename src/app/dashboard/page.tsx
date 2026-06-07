@@ -1,8 +1,7 @@
+import { prisma } from "@/lib/prisma";
 import { createClient } from "@/lib/supabase/server";
-import { PrismaClient } from "@prisma/client";
 import Link from "next/link";
 
-const prisma = new PrismaClient();
 
 export default async function DashboardPage() {
   const supabase = await createClient();

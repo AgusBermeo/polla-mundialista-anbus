@@ -1,8 +1,7 @@
+import { prisma } from "@/lib/prisma";
 import { createClient } from "@/lib/supabase/server";
-import { PrismaClient } from "@prisma/client";
 import ProfileForm from "@/components/ProfileForm";
 
-const prisma = new PrismaClient();
 
 export default async function ProfilePage() {
   const supabase = await createClient();

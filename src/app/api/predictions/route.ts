@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
 import { createClient } from "@/lib/supabase/server";
-
-const prisma = new PrismaClient();
 
 // GET /api/predictions — pronósticos del usuario actual
 export async function GET() {
