@@ -57,7 +57,7 @@ export default async function LeaderboardPage() {
                   {entry.totalPredictions}
                 </td>
                 <td className="px-6 py-4 text-center">
-                  <span className="font-bold text-lg">{entry.totalPoints}</span>
+                  <span className="font-bold text-lg text-cyan-700">{entry.totalPoints}</span>
                 </td>
               </tr>
             ))}
