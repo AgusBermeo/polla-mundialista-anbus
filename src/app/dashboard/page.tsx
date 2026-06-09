@@ -57,24 +57,24 @@ export default async function DashboardPage() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
         <div className="bg-white rounded-xl border border-gray-200 p-5">
           <p className="text-sm text-gray-500">Tus puntos</p>
-          <p className="text-3xl font-bold mt-1">{totalPoints}</p>
+          <p className="text-3xl font-bold mt-1 text-cyan-700">{totalPoints}</p>
         </div>
         <div className="bg-white rounded-xl border border-gray-200 p-5">
           <p className="text-sm text-gray-500">Posición</p>
-          <p className="text-3xl font-bold mt-1">
+          <p className="text-3xl font-bold mt-1 text-cyan-700">
             {position === 0 ? "-" : `#${position}`}
           </p>
         </div>
         <div className="bg-white rounded-xl border border-gray-200 p-5">
           <p className="text-sm text-gray-500">Pronósticos</p>
-          <p className="text-3xl font-bold mt-1">
+          <p className="text-3xl font-bold mt-1 text-cyan-700">
             {totalPredictions}
-            <span className="text-sm font-normal text-gray-400"> / {totalMatches}</span>
+            <span className="text-sm font-normal text-cyan-700"> / {totalMatches}</span>
           </p>
         </div>
         <div className="bg-white rounded-xl border border-gray-200 p-5">
           <p className="text-sm text-gray-500">Sin pronosticar</p>
-          <p className="text-3xl font-bold mt-1">{totalMatches - totalPredictions}</p>
+          <p className="text-3xl font-bold mt-1 text-cyan-700">{totalMatches - totalPredictions}</p>
         </div>
       </div>
 
@@ -82,12 +82,15 @@ export default async function DashboardPage() {
       {upcomingMatches.length > 0 && (
         <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="font-semibold">Partidos pendientes de pronóstico</h2>
+            <h2 className="font-semibold text-cyan-700">Partidos pendientes de pronóstico</h2>
             <Link
               href="/dashboard/matches"
-              className="text-sm text-blue-600 hover:underline"
+              className="text-sm text-cyan-700 hover:underline cursor-pointer flex items-center gap-2"
             >
-              Ver todos →
+              Ver todos
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-4">
+                <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+              </svg>
             </Link>
           </div>
           <div className="space-y-3">
@@ -106,7 +109,7 @@ export default async function DashboardPage() {
                         timeZone: "America/Guayaquil",
                       })}
                     </span>
-                    <span className="text-sm font-medium">
+                    <span className="text-sm font-medium text-gray-500">
                       {match.homeTeam.name} vs {match.awayTeam.name}
                     </span>
                   </div>
@@ -124,23 +127,23 @@ export default async function DashboardPage() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Link
           href="/dashboard/matches"
-          className="bg-blue-600 text-white rounded-xl p-5 hover:bg-blue-700 transition-colors"
+          className="bg-cyan-600 text-white rounded-xl p-5 cursor-pointer transition-colors hover:bg-cyan-600/80"
         >
           <p className="font-semibold">⚽ Hacer pronósticos</p>
-          <p className="text-sm text-blue-100 mt-1">Pronostica los próximos partidos</p>
+          <p className="text-sm text-white mt-1">Pronostica los próximos partidos</p>
         </Link>
         <Link
           href="/dashboard/leaderboard"
           className="bg-white border border-gray-200 rounded-xl p-5 hover:bg-gray-50 transition-colors"
         >
-          <p className="font-semibold">🏆 Ver posiciones</p>
+          <p className="font-semibold text-cyan-700">🏆 Ver posiciones</p>
           <p className="text-sm text-gray-400 mt-1">Mira cómo vas en el ranking</p>
         </Link>
         <Link
           href="/dashboard/profile"
           className="bg-white border border-gray-200 rounded-xl p-5 hover:bg-gray-50 transition-colors"
         >
-          <p className="font-semibold">👤 Mi perfil</p>
+          <p className="font-semibold text-cyan-700">👤 Mi perfil</p>
           <p className="text-sm text-gray-400 mt-1">Actualiza tu nombre</p>
         </Link>
       </div>

@@ -107,7 +107,7 @@ export default function MatchList({
           <button
             key={group}
             onClick={() => setActiveGroup(group)}
-            className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
+            className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors cursor-pointer ${
               activeGroup === group
                 ? "bg-cyan-700 text-white"
                 : "bg-white border border-gray-200 text-gray-600 hover:bg-gray-50"
@@ -190,7 +190,7 @@ function MatchCard({
   }
 
   return (
-    <div className={`bg-white rounded-xl border p-4 ${saved ? "border-green-200" : "border-gray-200"}`}>
+    <div className={`bg-white rounded-xl border p-4 ${saved ? "border-cyan-200" : "border-gray-200"}`}>
       <div className="flex items-center justify-between gap-4">
         <div className="text-xs text-gray-400 w-24 shrink-0">
           {matchDate.toLocaleDateString("es", { day: "numeric", month: "short", timeZone: "America/Guayaquil" })}
@@ -199,23 +199,23 @@ function MatchCard({
         </div>
 
         <div className="flex items-center gap-3 flex-1 justify-center text-gray-600">
-          <span className="font-medium text-right w-28 truncate">{match.homeTeam.name}</span>
+          <span className="font-medium text-right w-28">{match.homeTeam.name}</span>
           <div className="flex items-center gap-1">
             <input
               type="number" min={0} max={20} value={home}
               onChange={(e) => { setHome(e.target.value === "" ? "" : Number(e.target.value)); setSaved(false); }}
               disabled={isPast || match.isFinished}
-              className="w-10 h-10 text-center border rounded-lg font-bold text-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 disabled:bg-gray-100"
+              className="w-10 h-10 text-right border rounded-lg font-bold text-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 disabled:bg-gray-100"
             />
             <span className="text-gray-400 font-bold">-</span>
             <input
               type="number" min={0} max={20} value={away}
               onChange={(e) => { setAway(e.target.value === "" ? "" : Number(e.target.value)); setSaved(false); }}
               disabled={isPast || match.isFinished}
-              className="w-10 h-10 text-center border rounded-lg font-bold text-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 disabled:bg-gray-100"
+              className="w-10 h-10 text-right border rounded-lg font-bold text-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 disabled:bg-gray-100"
             />
           </div>
-          <span className="font-medium text-left w-28 truncate">{match.awayTeam.name}</span>
+          <span className="font-medium text-left w-28">{match.awayTeam.name}</span>
         </div>
 
         <div className="w-24 shrink-0 flex flex-col items-end gap-1">
@@ -231,7 +231,7 @@ function MatchCard({
               onClick={handleSave}
               disabled={saving || home === "" || away === ""}
               className={`text-xs px-3 py-1.5 rounded-lg font-medium transition-colors disabled:opacity-40 ${
-                saved ? "bg-green-100 text-green-700" : "bg-cyan-600 text-white hover:bg-cyan-700"
+                saved ? "bg-cyan-100 text-cyan-700" : "bg-cyan-600 text-white hover:bg-cyan-700"
               }`}
             >
               {saving ? "..." : saved ? "✓ Guardado" : "Guardar"}
