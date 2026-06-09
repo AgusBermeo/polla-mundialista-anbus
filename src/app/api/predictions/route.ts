@@ -44,8 +44,8 @@ export async function POST(request: Request) {
     if (!match) {
       return NextResponse.json({ error: "Partido no encontrado" }, { status: 404 });
     }
-    if (match.isFinished) {
-      return NextResponse.json({ error: "El partido ya terminó" }, { status: 400 });
+    if (match.isFinished || match.matchDate < new Date()) {
+      return NextResponse.json({ error: "El partido ya comenzó" }, { status: 400 });
     }
 
     // Upsert: crea o actualiza el pronóstico
