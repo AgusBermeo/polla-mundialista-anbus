@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { getFlagClass } from "@/lib/teamFlags";
 
 type Team = { id: string; name: string; code: string; group: string; flag?: string };
 type Match = {
@@ -95,7 +96,7 @@ function AdminMatchCard({ match }: { match: Match }) {
 
         {/* Equipos y marcador */}
         <div className="flex items-center gap-3 flex-1 justify-center">
-          <span className="font-medium text-right w-28 ">{match.homeTeam.flag} {match.homeTeam.name}</span>
+          <span className="font-medium text-right w-28 "><span className={getFlagClass(match.homeTeam.code)} mr-1></span> {match.homeTeam.name}</span>
 
           <div className="flex items-center gap-1">
             <input
@@ -117,7 +118,7 @@ function AdminMatchCard({ match }: { match: Match }) {
             />
           </div>
 
-          <span className="font-medium text-left w-28">{match.awayTeam.flag} {match.awayTeam.name}</span>
+          <span className="font-medium text-left w-28"><span className={getFlagClass(match.awayTeam.code)} mr-1></span> {match.awayTeam.name}</span>
         </div>
 
         {/* Botón y estado */}

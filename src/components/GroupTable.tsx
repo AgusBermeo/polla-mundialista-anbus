@@ -1,5 +1,7 @@
 "use client";
 
+import { getFlagClass } from "@/lib/teamFlags";
+
 type Team = { id: string; name: string; code: string; group: string; flag?: string };
 
 export type MatchForTable = {
@@ -176,8 +178,8 @@ export default function GroupTable({
                     )}
                   </td>
                   <td className="px-4 py-2.5 font-medium text-gray-700">
-                    <span className="text-xs text-gray-400 font-normal mr-1.5">{s.teamCode}</span>
-                    {s.teamFlag} {s.teamName}
+                    <span className={`${getFlagClass(s.teamCode)} mr-1.5`} />
+                    {s.teamName}
                   </td>
                   <td className="text-center px-2 py-2.5 text-gray-600">{s.played}</td>
                   <td className="text-center px-2 py-2.5 text-gray-600">{s.won}</td>
