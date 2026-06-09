@@ -1,6 +1,6 @@
 "use client";
 
-type Team = { id: string; name: string; code: string; group: string };
+type Team = { id: string; name: string; code: string; group: string; flag?: string };
 
 export type MatchForTable = {
   id: string;
@@ -23,6 +23,7 @@ export type Standing = {
   ga: number;
   gd: number;
   points: number;
+  teamFlag: string;
 };
 
 export function computeStandings(matches: MatchForTable[]): Standing[] {
@@ -37,6 +38,7 @@ export function computeStandings(matches: MatchForTable[]): Standing[] {
           teamCode: team.code,
           played: 0, won: 0, drawn: 0, lost: 0,
           gf: 0, ga: 0, gd: 0, points: 0,
+          teamFlag: (team as any).flag ?? "",
         };
       }
     }
@@ -175,7 +177,7 @@ export default function GroupTable({
                   </td>
                   <td className="px-4 py-2.5 font-medium text-gray-700">
                     <span className="text-xs text-gray-400 font-normal mr-1.5">{s.teamCode}</span>
-                    {s.teamName}
+                    {s.teamFlag} {s.teamName}
                   </td>
                   <td className="text-center px-2 py-2.5 text-gray-600">{s.played}</td>
                   <td className="text-center px-2 py-2.5 text-gray-600">{s.won}</td>
