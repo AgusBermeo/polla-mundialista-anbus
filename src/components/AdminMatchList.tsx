@@ -95,7 +95,7 @@ function AdminMatchCard({ match }: { match: Match }) {
         </div>
 
         {/* Equipos y marcador */}
-        <div className="flex items-center gap-3 flex-1 justify-center">
+        <div className="flex items-center gap-3 flex-1 justify-center text-gray-500">
           <span className="font-medium text-right w-28 "><span className={getFlagClass(match.homeTeam.code)} mr-1></span> {match.homeTeam.name}</span>
 
           <div className="flex items-center gap-1">
@@ -105,7 +105,7 @@ function AdminMatchCard({ match }: { match: Match }) {
               max={20}
               value={home}
               onChange={(e) => { setHome(e.target.value); setSaved(false); }}
-              className="w-10 h-10 text-center border rounded-lg font-bold text-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-10 h-10 text-right border rounded-lg font-bold text-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
             <span className="text-gray-400 font-bold">-</span>
             <input
@@ -114,7 +114,7 @@ function AdminMatchCard({ match }: { match: Match }) {
               max={20}
               value={away}
               onChange={(e) => { setAway(e.target.value); setSaved(false); }}
-              className="w-10 h-10 text-center border rounded-lg font-bold text-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-10 h-10 text-right border rounded-lg font-bold text-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
 

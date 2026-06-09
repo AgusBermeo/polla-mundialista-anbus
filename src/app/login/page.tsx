@@ -60,10 +60,17 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+    <div className="min-h-screen flex items-center justify-center bg-slate-200">
       <div className="bg-white p-8 rounded-xl shadow-md w-full max-w-sm">
-        <h1 className="text-2xl font-bold text-center mb-6">
-          ⚽ Polla Mundial 2026
+        <div className="flex justify-center mb-4">
+          <img
+            src="/logo-anbu-futbol.png"
+            alt="Anbus Logo"
+            className="w-10"
+          />
+        </div>
+        <h1 className="text-2xl font-bold text-center mb-6 text-cyan-700">
+          Polla Anbus Mundial 2026
         </h1>
 
         <div className="space-y-4">
@@ -72,14 +79,14 @@ export default function LoginPage() {
             placeholder="Email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-cyan-700 text-gray-500"
           />
           <input
             type="password"
             placeholder="Contraseña"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-cyan-700 text-gray-500"
           />
 
           {error && (
@@ -89,7 +96,7 @@ export default function LoginPage() {
           <button
             onClick={handleLogin}
             disabled={loading}
-            className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50"
+            className="w-full bg-cyan-700 text-white py-2 rounded-lg hover:bg-cyan-900 disabled:opacity-50"
           >
             {loading ? "Cargando..." : "Iniciar sesión"}
           </button>
@@ -97,7 +104,7 @@ export default function LoginPage() {
           <button
             onClick={handleRegister}
             disabled={loading}
-            className="w-full border border-blue-600 text-blue-600 py-2 rounded-lg hover:bg-blue-50 disabled:opacity-50"
+            className="w-full border border-cyan-700 text-cyan-700 py-2 rounded-lg hover:bg-cyan-900 hover:text-white disabled:opacity-50"
           >
             Registrarse
           </button>

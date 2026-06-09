@@ -16,13 +16,13 @@ export default async function DashboardLayout({
   const dbUser = await prisma.user.findUnique({ where: { id: user.id } });
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <nav className="bg-white border-b border-gray-200 px-6 py-4">
+    <div className="min-h-screen bg-slate-200">
+      <nav className="bg-slate-100 border-b border-gray-200 px-6 py-4 shadow-2xs">
         <div className="max-w-5xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-6">
             <div className="flex items-center gap-2">
               <img className="object-contain" src="/logo-anbu-futbol.png" alt="Anbus" width={25} height={50} />
-              <span className="font-bold text-lg text-cyan-700">Polla Mundial 2026</span>
+              <span className="font-bold text-lg text-cyan-700">Polla Anbus Mundial 2026</span>
             </div>
             <div className="hidden md:flex items-center gap-6">
               <a href="/dashboard" className="text-sm text-gray-600 hover:text-gray-900">Inicio</a>

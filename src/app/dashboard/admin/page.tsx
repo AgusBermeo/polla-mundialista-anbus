@@ -18,7 +18,7 @@ export default async function AdminPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-2">Panel de administrador</h1>
+      <h1 className="text-2xl font-bold mb-2 text-cyan-700">Panel de administrador</h1>
       <p className="text-gray-500 text-sm mb-6">
         Ingresa los resultados de los partidos para calcular los puntos automáticamente.
       </p>
