@@ -2,7 +2,7 @@
 
 import { getFlagClass } from "@/lib/teamFlags";
 
-type Team = { id: string; name: string; code: string; group: string; flag?: string };
+type Team = { id: string; name: string; code: string; group: string };
 
 export type MatchForTable = {
   id: string;

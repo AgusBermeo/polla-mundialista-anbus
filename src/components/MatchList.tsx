@@ -5,7 +5,7 @@ import { getFlagClass } from "@/lib/teamFlags";
 import { useState } from "react";
 import GroupTable, { MatchForTable, computeStandings, compareThird } from "@/components/GroupTable";
 
-type Team = { id: string; name: string; code: string; group: string; flag?: string };
+type Team = { id: string; name: string; code: string; group: string };
 type Match = {
   id: string;
   matchDate: Date;

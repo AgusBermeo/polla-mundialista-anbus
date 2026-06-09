@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { getFlagClass } from "@/lib/teamFlags";
 
-type Team = { id: string; name: string; code: string; group: string; flag?: string };
+type Team = { id: string; name: string; code: string; group: string };
 type Match = {
   id: string;
   matchDate: Date;

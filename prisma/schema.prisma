@@ -23,7 +23,6 @@ model Team {
   name        String
   code        String  @unique
   flagUrl     String?
-  flag        String?
   group       String
   awayMatches Match[] @relation("AwayTeam")
   homeMatches Match[] @relation("HomeTeam")
