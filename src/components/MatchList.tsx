@@ -1,5 +1,7 @@
 "use client";
 
+import { getFlagClass } from "@/lib/teamFlags";
+
 import { useState } from "react";
 import GroupTable, { MatchForTable, computeStandings, compareThird } from "@/components/GroupTable";
 
@@ -199,7 +201,7 @@ function MatchCard({
         </div>
 
         <div className="flex items-center gap-3 flex-1 justify-center text-gray-600">
-          <span className="font-medium text-right w-28">{match.homeTeam.flag} {match.homeTeam.name}</span>
+          <span className="font-medium text-right w-48"><span className={`${getFlagClass(match.homeTeam.code)} mr-1.5`} />{match.homeTeam.name}</span>
           <div className="flex items-center gap-1">
             <input
               type="number" min={0} max={20} value={home}
@@ -215,7 +217,7 @@ function MatchCard({
               className="w-10 h-10 text-right border rounded-lg font-bold text-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 disabled:bg-gray-100"
             />
           </div>
-          <span className="font-medium text-left w-28">{match.awayTeam.flag} {match.awayTeam.name}</span>
+          <span className="font-medium text-left w-48">{match.awayTeam.name}<span className={`${getFlagClass(match.awayTeam.code)} ml-1.5`} /></span>
         </div>
 
         <div className="w-24 shrink-0 flex flex-col items-end gap-1">
