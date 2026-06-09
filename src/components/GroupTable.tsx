@@ -136,20 +136,20 @@ export default function GroupTable({
         )}
       </div>
 
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
+      <div className="overflow-x-auto scrollbar-none">
+        <table className="w-full text-xs sm:text-sm">
           <thead>
             <tr className="bg-gray-50 border-b border-gray-100">
-              <th className="text-left px-4 py-2 text-xs font-medium text-gray-400 w-6">#</th>
-              <th className="text-left px-4 py-2 text-xs font-medium text-gray-400">Equipo</th>
-              <th className="text-center px-2 py-2 text-xs font-medium text-gray-400 w-8" title="Partidos jugados">PJ</th>
-              <th className="text-center px-2 py-2 text-xs font-medium text-gray-400 w-8" title="Ganados">G</th>
-              <th className="text-center px-2 py-2 text-xs font-medium text-gray-400 w-8" title="Empatados">E</th>
-              <th className="text-center px-2 py-2 text-xs font-medium text-gray-400 w-8" title="Perdidos">P</th>
-              <th className="text-center px-2 py-2 text-xs font-medium text-gray-400 w-8" title="Goles a favor">GF</th>
-              <th className="text-center px-2 py-2 text-xs font-medium text-gray-400 w-8" title="Goles en contra">GC</th>
-              <th className="text-center px-2 py-2 text-xs font-medium text-gray-400 w-10" title="Diferencia de goles">DG</th>
-              <th className="text-center px-3 py-2 text-xs font-medium text-gray-400 w-10" title="Puntos">Pts</th>
+              <th className="text-left px-2 sm:px-4 py-2 text-[10px] sm:text-xs font-semibold text-gray-400 w-6">#</th>
+              <th className="text-left px-2 sm:px-4 py-2 text-[10px] sm:text-xs font-semibold text-gray-400">Equipo</th>
+              <th className="text-center px-1 sm:px-2 py-2 text-[10px] sm:text-xs font-semibold text-gray-400 w-8" title="Partidos jugados">PJ</th>
+              <th className="text-center px-1 sm:px-2 py-2 text-[10px] sm:text-xs font-semibold text-gray-400 w-8" title="Ganados">G</th>
+              <th className="text-center px-1 sm:px-2 py-2 text-[10px] sm:text-xs font-semibold text-gray-400 w-8" title="Empatados">E</th>
+              <th className="text-center px-1 sm:px-2 py-2 text-[10px] sm:text-xs font-semibold text-gray-400 w-8" title="Perdidos">P</th>
+              <th className="text-center px-1 sm:px-2 py-2 text-[10px] sm:text-xs font-semibold text-gray-400 w-8" title="Goles a favor">GF</th>
+              <th className="text-center px-1 sm:px-2 py-2 text-[10px] sm:text-xs font-semibold text-gray-400 w-8" title="Goles en contra">GC</th>
+              <th className="text-center px-1 sm:px-2 py-2 text-[10px] sm:text-xs font-semibold text-gray-400 w-10" title="Diferencia de goles">DG</th>
+              <th className="text-center px-2 sm:px-3 py-2 text-[10px] sm:text-xs font-semibold text-gray-400 w-10" title="Puntos">Pts</th>
             </tr>
           </thead>
           <tbody>
@@ -164,34 +164,38 @@ export default function GroupTable({
 
               return (
                 <tr key={s.teamId} className={`border-b border-gray-50 last:border-0 transition-colors ${rowBg}`}>
-                  <td className="px-4 py-2.5 text-xs font-medium">
+                  <td className="px-2 sm:px-4 py-2.5 font-medium text-xs">
                     {top2 ? (
-                      <span className={`inline-flex w-4 h-4 rounded-full text-[10px] items-center justify-center font-bold ${ac.badge}`}>
+                      <span className={`inline-flex w-4 h-4 rounded-full text-[9px] items-center justify-center font-bold ${ac.badge}`}>
                         {i + 1}
                       </span>
                     ) : thirdIn ? (
-                      <span className={`inline-flex w-4 h-4 rounded-full text-[10px] items-center justify-center font-bold bg-transparent ${ac.thirdBadge}`}>
+                      <span className={`inline-flex w-4 h-4 rounded-full text-[9px] items-center justify-center font-bold bg-transparent ${ac.thirdBadge}`}>
                         3
                       </span>
                     ) : (
                       <span className="text-gray-400">{i + 1}</span>
                     )}
                   </td>
-                  <td className="px-4 py-2.5 font-medium text-gray-700">
-                    <span className={`${getFlagClass(s.teamCode)} mr-1.5`} />
-                    {s.teamName}
+                  <td className="px-2 sm:px-4 py-2.5 font-medium text-gray-700 min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <span className={`${getFlagClass(s.teamCode)} shrink-0 shadow-3xs rounded-xs`} />
+                      <span className="truncate max-w-[80px] sm:max-w-none inline-block align-middle" title={s.teamName}>
+                        {s.teamName}
+                      </span>
+                    </div>
                   </td>
-                  <td className="text-center px-2 py-2.5 text-gray-600">{s.played}</td>
-                  <td className="text-center px-2 py-2.5 text-gray-600">{s.won}</td>
-                  <td className="text-center px-2 py-2.5 text-gray-600">{s.drawn}</td>
-                  <td className="text-center px-2 py-2.5 text-gray-600">{s.lost}</td>
-                  <td className="text-center px-2 py-2.5 text-gray-600">{s.gf}</td>
-                  <td className="text-center px-2 py-2.5 text-gray-600">{s.ga}</td>
-                  <td className="text-center px-2 py-2.5 font-medium text-gray-700">
+                  <td className="text-center px-1 sm:px-2 py-2.5 text-gray-500 font-medium">{s.played}</td>
+                  <td className="text-center px-1 sm:px-2 py-2.5 text-gray-500">{s.won}</td>
+                  <td className="text-center px-1 sm:px-2 py-2.5 text-gray-500">{s.drawn}</td>
+                  <td className="text-center px-1 sm:px-2 py-2.5 text-gray-500">{s.lost}</td>
+                  <td className="text-center px-1 sm:px-2 py-2.5 text-gray-500">{s.gf}</td>
+                  <td className="text-center px-1 sm:px-2 py-2.5 text-gray-500">{s.ga}</td>
+                  <td className="text-center px-1 sm:px-2 py-2.5 font-semibold text-gray-600">
                     {s.gd > 0 ? `+${s.gd}` : s.gd}
                   </td>
-                  <td className="text-center px-3 py-2.5">
-                    <span className="font-bold text-gray-900">{s.points}</span>
+                  <td className="text-center px-2 sm:px-3 py-2.5">
+                    <span className="font-extrabold text-gray-900">{s.points}</span>
                   </td>
                 </tr>
               );

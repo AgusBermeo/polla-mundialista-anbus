@@ -103,15 +103,15 @@ export default function MatchList({
 
   return (
     <div>
-      {/* Group tabs */}
-      <div className="flex flex-wrap gap-2 mb-6">
+      {/* Group tabs - horizontally scrollable on mobile */}
+      <div className="flex gap-2 mb-6 overflow-x-auto pb-2 -mx-6 px-6 scrollbar-none">
         {groups.map((group) => (
           <button
             key={group}
             onClick={() => setActiveGroup(group)}
-            className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors cursor-pointer ${
+            className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors cursor-pointer shrink-0 ${
               activeGroup === group
-                ? "bg-cyan-700 text-white"
+                ? "bg-cyan-700 text-white shadow-xs"
                 : "bg-white border border-gray-200 text-gray-600 hover:bg-gray-50"
             }`}
           >
@@ -164,82 +164,190 @@ function MatchCard({
 }) {
   const [home, setHome] = useState<number | "">(prediction?.homeScore ?? "");
   const [away, setAway] = useState<number | "">(prediction?.awayScore ?? "");
-  const [saved, setSaved] = useState(!!prediction);
-  const [saving, setSaving] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">(
+    prediction ? "saved" : "idle"
+  );
 
   const matchDate = new Date(match.matchDate);
   const isPast = matchDate < new Date();
 
-  async function handleSave() {
-    if (home === "" || away === "") return;
-    setSaving(true);
+  // Debounced auto-save effect
+  import("react").then(({ useEffect }) => {
+    // Note: We use dynamic check or standard react import to be safe, but since React is in scope, 
+    // we can use useEffect directly because it was imported at the top of the file!
+  });
 
-    const res = await fetch("/api/predictions", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        matchId: match.id,
-        homeScore: Number(home),
-        awayScore: Number(away),
-      }),
-    });
+  // Since useEffect is already imported at the top of the file, we can use it directly.
+  const { useEffect } = require("react");
 
-    if (res.ok) {
-      setSaved(true);
-      onSaved(Number(home), Number(away));
+  useEffect(() => {
+    const initialHome = prediction?.homeScore ?? "";
+    const initialAway = prediction?.awayScore ?? "";
+
+    // If the input scores match the initial predictions in DB, skip saving
+    if (home === initialHome && away === initialAway) {
+      return;
     }
-    setSaving(false);
-  }
+
+    // Do not save if either input is empty (both scores are required for a valid prediction)
+    if (home === "" || away === "") {
+      setSaveStatus("idle");
+      return;
+    }
+
+    setSaveStatus("saving");
+
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch("/api/predictions", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            matchId: match.id,
+            homeScore: Number(home),
+            awayScore: Number(away),
+          }),
+        });
+
+        if (res.ok) {
+          setSaveStatus("saved");
+          onSaved(Number(home), Number(away));
+        } else {
+          setSaveStatus("error");
+        }
+      } catch (err) {
+        setSaveStatus("error");
+      }
+    }, 600); // 600ms debounce delay
+
+    return () => clearTimeout(timer);
+  }, [home, away, match.id, onSaved, prediction]);
+
+  const renderStatus = () => {
+    if (match.isFinished) {
+      return (
+        <div className="text-right">
+          <span className="text-xs text-gray-400 block md:inline md:mr-2">Finalizado</span>
+          <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md">
+            {match.homeScore} - {match.awayScore}
+          </span>
+        </div>
+      );
+    }
+    if (isPast) {
+      return (
+        <span className="text-xs font-medium text-amber-600 bg-amber-50 px-2 py-0.5 rounded-md">
+          En juego
+        </span>
+      );
+    }
+    
+    if (saveStatus === "saving") {
+      return (
+        <div className="flex items-center gap-1.5 text-xs text-cyan-600 font-semibold bg-cyan-50 px-2 py-0.5 rounded-md animate-pulse">
+          <svg className="animate-spin h-3 w-3 text-cyan-600" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+          </svg>
+          <span>Guardando...</span>
+        </div>
+      );
+    }
+    if (saveStatus === "saved") {
+      return (
+        <span className="text-xs font-semibold text-emerald-600 bg-emerald-50 px-2.5 py-0.5 rounded-md flex items-center gap-1">
+          <svg className="w-3 h-3 text-emerald-600" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+          </svg>
+          <span>Guardado</span>
+        </span>
+      );
+    }
+    if (saveStatus === "error") {
+      return (
+        <span className="text-xs font-bold text-red-600 bg-red-50 px-2.5 py-0.5 rounded-md">
+          Error al guardar
+        </span>
+      );
+    }
+    return (
+      <span className="text-xs text-gray-400 italic">
+        Sin pronóstico
+      </span>
+    );
+  };
 
   return (
-    <div className={`bg-white rounded-xl border p-4 ${saved ? "border-cyan-200" : "border-gray-200"}`}>
-      <div className="flex items-center justify-between gap-4">
-        <div className="text-xs text-gray-400 w-24 shrink-0">
-          {matchDate.toLocaleDateString("es", { day: "numeric", month: "short", timeZone: "America/Guayaquil" })}
-          <br />
-          {matchDate.toLocaleTimeString("es", { hour: "2-digit", minute: "2-digit", timeZone: "America/Guayaquil" })}
+    <div className={`bg-white rounded-xl border p-4 transition-all duration-200 hover:shadow-xs ${
+      saveStatus === "saved" ? "border-cyan-200 bg-cyan-50/10" : "border-gray-200"
+    }`}>
+      {/* Responsive layout: stacked flex-col on mobile, single flex-row on desktop */}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 md:gap-4">
+        
+        {/* Date / Time Row (top row on mobile, left column on desktop) */}
+        <div className="flex justify-between md:justify-start items-center md:w-28 md:shrink-0 text-xs text-gray-400 font-medium">
+          <div>
+            {matchDate.toLocaleDateString("es", { day: "numeric", month: "short", timeZone: "America/Guayaquil" })}
+            <span className="mx-1.5">•</span>
+            {matchDate.toLocaleTimeString("es", { hour: "2-digit", minute: "2-digit", timeZone: "America/Guayaquil" })}
+          </div>
+          {/* On mobile: display the save status or match status on the right */}
+          <div className="md:hidden">
+            {renderStatus()}
+          </div>
         </div>
 
-        <div className="flex items-center gap-3 flex-1 justify-center text-gray-600">
-          <span className="font-medium text-right w-48"><span className={`${getFlagClass(match.homeTeam.code)} mr-1.5`} />{match.homeTeam.name}</span>
-          <div className="flex items-center gap-1">
+        {/* Team Matchup and Inputs (middle on both mobile & desktop) */}
+        <div className="flex items-center justify-between gap-2 md:gap-4 flex-1 text-gray-700">
+          {/* Home Team */}
+          <div className="flex items-center justify-end gap-2 flex-1 text-right min-w-0">
+            <span className="font-semibold text-xs sm:text-sm md:text-base text-gray-800 truncate" title={match.homeTeam.name}>
+              {match.homeTeam.name}
+            </span>
+            <span className={`${getFlagClass(match.homeTeam.code)} shrink-0 shadow-3xs rounded-xs`} />
+          </div>
+
+          {/* Scores input container */}
+          <div className="flex items-center gap-1.5 shrink-0 bg-slate-50 p-1 rounded-lg border border-slate-100">
             <input
-              type="number" min={0} max={20} value={home}
-              onChange={(e) => { setHome(e.target.value === "" ? "" : Number(e.target.value)); setSaved(false); }}
+              type="number"
+              min={0}
+              max={20}
+              value={home}
+              onChange={(e) => {
+                setHome(e.target.value === "" ? "" : Number(e.target.value));
+              }}
               disabled={isPast || match.isFinished}
-              className="w-10 h-10 text-right border rounded-lg font-bold text-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 disabled:bg-gray-100"
+              className="w-10 h-10 text-center border border-gray-200 bg-white rounded-md font-extrabold text-base focus:outline-hidden focus:ring-2 focus:ring-cyan-500 disabled:bg-slate-100/60 disabled:text-gray-400"
             />
-            <span className="text-gray-400 font-bold">-</span>
+            <span className="text-gray-400 font-bold text-sm">-</span>
             <input
-              type="number" min={0} max={20} value={away}
-              onChange={(e) => { setAway(e.target.value === "" ? "" : Number(e.target.value)); setSaved(false); }}
+              type="number"
+              min={0}
+              max={20}
+              value={away}
+              onChange={(e) => {
+                setAway(e.target.value === "" ? "" : Number(e.target.value));
+              }}
               disabled={isPast || match.isFinished}
-              className="w-10 h-10 text-right border rounded-lg font-bold text-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 disabled:bg-gray-100"
+              className="w-10 h-10 text-center border border-gray-200 bg-white rounded-md font-extrabold text-base focus:outline-hidden focus:ring-2 focus:ring-cyan-500 disabled:bg-slate-100/60 disabled:text-gray-400"
             />
           </div>
-          <span className="font-medium text-left w-48">{match.awayTeam.name}<span className={`${getFlagClass(match.awayTeam.code)} ml-1.5`} /></span>
+
+          {/* Away Team */}
+          <div className="flex items-center justify-start gap-2 flex-1 text-left min-w-0">
+            <span className={`${getFlagClass(match.awayTeam.code)} shrink-0 shadow-3xs rounded-xs`} />
+            <span className="font-semibold text-xs sm:text-sm md:text-base text-gray-800 truncate" title={match.awayTeam.name}>
+              {match.awayTeam.name}
+            </span>
+          </div>
         </div>
 
-        <div className="w-24 shrink-0 flex flex-col items-end gap-1">
-          {match.isFinished ? (
-            <div className="text-right">
-              <span className="text-xs text-gray-400 block">Finalizado</span>
-              <span className="text-xs font-semibold text-gray-600">{match.homeScore} - {match.awayScore}</span>
-            </div>
-          ) : isPast ? (
-            <span className="text-xs text-gray-400">En juego</span>
-          ) : (
-            <button
-              onClick={handleSave}
-              disabled={saving || home === "" || away === ""}
-              className={`text-xs px-3 py-1.5 rounded-lg font-medium transition-colors disabled:opacity-40 ${
-                saved ? "bg-cyan-100 text-cyan-700" : "bg-cyan-600 text-white hover:bg-cyan-700"
-              }`}
-            >
-              {saving ? "..." : saved ? "✓ Guardado" : "Guardar"}
-            </button>
-          )}
+        {/* Right Column (Save/Status - hidden on mobile, visible on desktop) */}
+        <div className="hidden md:flex md:w-28 md:shrink-0 md:justify-end">
+          {renderStatus()}
         </div>
+
       </div>
     </div>
   );
