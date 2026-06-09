@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
-import LogoutButton from "@/components/LogoutButton";
+import Navbar from "@/components/Navbar";
 
 
 export default async function DashboardLayout({
@@ -17,44 +17,7 @@ export default async function DashboardLayout({
 
   return (
     <div className="min-h-screen bg-slate-200">
-      <nav className="bg-slate-100 border-b border-gray-200 px-6 py-4 shadow-2xs">
-        <div className="max-w-5xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-6">
-            <div className="flex items-center gap-2">
-              <img className="object-contain" src="/logo-anbu-futbol.png" alt="Anbus" width={25} height={50} />
-              <span className="font-bold text-lg text-cyan-700 bowlby-one">Polla Anbus 2026</span>
-            </div>
-            <div className="hidden lg:flex items-center gap-6">
-              <a href="/dashboard" className={`text-sm text-gray-600 hover:text-gray-900`}>Inicio</a>
-              <a href="/dashboard/matches" className={`text-sm text-gray-600 hover:text-gray-900`}>Pronósticos</a>
-              <a href="/dashboard/stages" className={`text-sm text-gray-600 hover:text-gray-900`}>Fases</a>
-              <a href="/dashboard/leaderboard" className={`text-sm text-gray-600 hover:text-gray-900`}>Posiciones</a>
-              <a href="/dashboard/profile" className={`text-sm text-gray-600 hover:text-gray-900`}>Mi perfil</a>
-              {dbUser?.isAdmin && (
-                <a href="/dashboard/admin" className="text-sm text-cyan-700 hover:text-cyan-900 font-medium">
-                  Admin
-                </a>
-              )}
-            </div>
-          </div>
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-cyan-700 font-medium">{dbUser?.name}</span>
-            <LogoutButton />
-          </div>
-        </div>
-        <div className="flex lg:hidden justify-center items-center gap-5">
-          <a href="/dashboard" className={`text-sm text-gray-600 hover:text-gray-900`}>Inicio</a>
-          <a href="/dashboard/matches" className={`text-sm text-gray-600 hover:text-gray-900`}>Pronósticos</a>
-          <a href="/dashboard/stages" className={`text-sm text-gray-600 hover:text-gray-900`}>Fases</a>
-          <a href="/dashboard/leaderboard" className={`text-sm text-gray-600 hover:text-gray-900`}>Posiciones</a>
-          <a href="/dashboard/profile" className={`text-sm text-gray-600 hover:text-gray-900`}>Mi perfil</a>
-          {dbUser?.isAdmin && (
-            <a href="/dashboard/admin" className="text-sm text-cyan-700 hover:text-cyan-900 font-medium">
-              Admin
-            </a>
-          )}
-        </div>
-      </nav>
+      <Navbar userName={dbUser?.name} isAdmin={!!dbUser?.isAdmin} />
       <main className="max-w-5xl mx-auto px-6 py-8">
         {children}
       </main>
