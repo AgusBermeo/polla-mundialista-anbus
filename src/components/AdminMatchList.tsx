@@ -27,15 +27,15 @@ export default function AdminMatchList({ matches }: { matches: Match[] }) {
 
   return (
     <div>
-      {/* Tabs de grupos */}
-      <div className="flex flex-wrap gap-2 mb-6">
+      {/* Group tabs - horizontally scrollable, matching MatchList style */}
+      <div className="flex gap-2 mb-6 overflow-x-auto pb-2 -mx-6 px-6 scrollbar-none">
         {groups.map((group) => (
           <button
             key={group}
             onClick={() => setActiveGroup(group)}
-            className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
+            className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors cursor-pointer shrink-0 ${
               activeGroup === group
-                ? "bg-blue-600 text-white"
+                ? "bg-cyan-700 text-white shadow-xs"
                 : "bg-white border border-gray-200 text-gray-600 hover:bg-gray-50"
             }`}
           >
@@ -54,11 +54,11 @@ export default function AdminMatchList({ matches }: { matches: Match[] }) {
 }
 
 function AdminMatchCard({ match }: { match: Match }) {
-  const [home, setHome] = useState(match.homeScore ?? "");
-  const [away, setAway] = useState(match.awayScore ?? "");
+  const [home, setHome] = useState<number | "">(match.homeScore ?? "");
+  const [away, setAway] = useState<number | "">(match.awayScore ?? "");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(match.isFinished);
-  const [updated, setUpdated] = useState(0); // cantidad de pronósticos actualizados
+  const [updated, setUpdated] = useState(0);
 
   const matchDate = new Date(match.matchDate);
 
@@ -84,60 +84,128 @@ function AdminMatchCard({ match }: { match: Match }) {
     setSaving(false);
   }
 
+  const renderStatus = () => {
+    if (saved && !saving) {
+      return (
+        <div className="flex flex-col items-end gap-1">
+          <span className="text-xs font-semibold text-emerald-600 bg-emerald-50 px-2.5 py-0.5 rounded-md flex items-center gap-1">
+            <svg className="w-3 h-3 text-emerald-600" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
+            Guardado
+          </span>
+          {updated > 0 && (
+            <span className="text-[10px] text-gray-400">{updated} pronósticos actualizados</span>
+          )}
+        </div>
+      );
+    }
+    if (saving) {
+      return (
+        <div className="flex items-center gap-1.5 text-xs text-cyan-600 font-semibold bg-cyan-50 px-2 py-0.5 rounded-md animate-pulse">
+          <svg className="animate-spin h-3 w-3 text-cyan-600" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+          </svg>
+          Calculando...
+        </div>
+      );
+    }
+    return (
+      <span className="text-xs text-gray-400 italic">Sin resultado</span>
+    );
+  };
+
   return (
-    <div className={`bg-white rounded-xl border p-4 ${saved ? "border-green-200" : "border-gray-200"}`}>
-      <div className="flex items-center justify-between gap-4">
-        {/* Fecha */}
-        <div className="text-xs text-gray-400 w-24 shrink-0">
-          {matchDate.toLocaleDateString("es", { day: "numeric", month: "short", timeZone: "America/Guayaquil" })}
-          <br />
-          {matchDate.toLocaleTimeString("es", { hour: "2-digit", minute: "2-digit", timeZone: "America/Guayaquil" })}
+    <div className={`bg-white rounded-xl border p-4 transition-all duration-200 hover:shadow-xs ${
+      saved ? "border-emerald-200 bg-emerald-50/10" : "border-gray-200"
+    }`}>
+      {/* Responsive layout: stacked on mobile, single row on desktop */}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 md:gap-4">
+
+        {/* Date / Time + mobile status */}
+        <div className="flex justify-between md:justify-start items-center md:w-28 md:shrink-0 text-xs text-gray-400 font-medium">
+          <div>
+            {matchDate.toLocaleDateString("es", { day: "numeric", month: "short", timeZone: "America/Guayaquil" })}
+            <span className="mx-1.5">•</span>
+            {matchDate.toLocaleTimeString("es", { hour: "2-digit", minute: "2-digit", timeZone: "America/Guayaquil" })}
+          </div>
+          {/* Status pill on mobile (top-right) */}
+          <div className="md:hidden">{renderStatus()}</div>
         </div>
 
-        {/* Equipos y marcador */}
-        <div className="flex items-center gap-3 flex-1 justify-center text-gray-500">
-          <span className="font-medium text-right w-28 "><span className={getFlagClass(match.homeTeam.code)} mr-1></span> {match.homeTeam.name}</span>
+        {/* Teams + score inputs */}
+        <div className="flex items-center justify-between gap-2 md:gap-4 flex-1 text-gray-700">
+          {/* Home team */}
+          <div className="flex items-center justify-end gap-2 flex-1 text-right min-w-0">
+            <span
+              className="font-semibold text-xs sm:text-sm md:text-base text-gray-800 truncate"
+              title={match.homeTeam.name}
+            >
+              {match.homeTeam.name}
+            </span>
+            <span className={`${getFlagClass(match.homeTeam.code)} shrink-0 shadow-3xs rounded-xs`} />
+          </div>
 
-          <div className="flex items-center gap-1">
+          {/* Score inputs */}
+          <div className="flex items-center gap-1.5 shrink-0 bg-slate-50 p-1 rounded-lg border border-slate-100">
             <input
               type="number"
               min={0}
               max={20}
               value={home}
-              onChange={(e) => { setHome(e.target.value); setSaved(false); }}
-              className="w-10 h-10 text-right border rounded-lg font-bold text-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              onChange={(e) => {
+                setHome(e.target.value === "" ? "" : Number(e.target.value));
+                setSaved(false);
+              }}
+              className="w-10 h-10 text-center border border-gray-200 bg-white rounded-md font-extrabold text-base focus:outline-none focus:ring-2 focus:ring-cyan-500"
             />
-            <span className="text-gray-400 font-bold">-</span>
+            <span className="text-gray-400 font-bold text-sm">-</span>
             <input
               type="number"
               min={0}
               max={20}
               value={away}
-              onChange={(e) => { setAway(e.target.value); setSaved(false); }}
-              className="w-10 h-10 text-right border rounded-lg font-bold text-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              onChange={(e) => {
+                setAway(e.target.value === "" ? "" : Number(e.target.value));
+                setSaved(false);
+              }}
+              className="w-10 h-10 text-center border border-gray-200 bg-white rounded-md font-extrabold text-base focus:outline-none focus:ring-2 focus:ring-cyan-500"
             />
           </div>
 
-          <span className="font-medium text-left w-28"><span className={getFlagClass(match.awayTeam.code)} mr-1></span> {match.awayTeam.name}</span>
+          {/* Away team */}
+          <div className="flex items-center justify-start gap-2 flex-1 text-left min-w-0">
+            <span className={`${getFlagClass(match.awayTeam.code)} shrink-0 shadow-3xs rounded-xs`} />
+            <span
+              className="font-semibold text-xs sm:text-sm md:text-base text-gray-800 truncate"
+              title={match.awayTeam.name}
+            >
+              {match.awayTeam.name}
+            </span>
+          </div>
         </div>
 
-        {/* Botón y estado */}
-        <div className="w-32 shrink-0 flex flex-col items-end gap-1">
+        {/* Right column: status + save button (desktop) */}
+        <div className="hidden md:flex md:flex-col md:items-end md:w-36 md:shrink-0 gap-1.5">
+          {renderStatus()}
           <button
             onClick={handleSave}
             disabled={saving || home === "" || away === ""}
-            className={`text-xs px-3 py-1.5 rounded-lg font-medium transition-colors disabled:opacity-40 ${
-              saved
-                ? "bg-green-100 text-green-700"
-                : "bg-blue-600 text-white hover:bg-blue-700"
-            }`}
+            className="text-xs px-3 py-1.5 rounded-lg font-medium transition-colors disabled:opacity-40 bg-cyan-700 text-white hover:bg-cyan-800 cursor-pointer"
           >
-            {saving ? "Calculando..." : saved ? "✓ Guardado" : "Guardar resultado"}
+            Guardar resultado
           </button>
-          {updated > 0 && (
-            <span className="text-xs text-gray-400">{updated} pronósticos actualizados</span>
-          )}
         </div>
+
+        {/* Save button on mobile (full width) */}
+        <button
+          onClick={handleSave}
+          disabled={saving || home === "" || away === ""}
+          className="md:hidden w-full text-sm py-2 rounded-lg font-medium transition-colors disabled:opacity-40 bg-cyan-700 text-white hover:bg-cyan-800 cursor-pointer"
+        >
+          Guardar resultado
+        </button>
       </div>
     </div>
   );

@@ -14,12 +14,23 @@ type Match = {
   awayScore: number | null;
   homeTeam: Team;
   awayTeam: Team;
+  stage: string;
 };
 type Prediction = {
   matchId: string;
   homeScore: number;
   awayScore: number;
 };
+
+const STAGE_LABELS: Record<string, string> = {
+  ROUND_OF_16: "Octavos de final",
+  QUARTER_FINAL: "Cuartos de final",
+  SEMI_FINAL: "Semifinales",
+  THIRD_PLACE: "Tercer puesto",
+  FINAL: "Final",
+};
+
+const STAGE_ORDER = ["ROUND_OF_16", "QUARTER_FINAL", "SEMI_FINAL", "THIRD_PLACE", "FINAL"];
 
 /**
  * Given a map of group → MatchForTable[], returns a Set of teamIds
@@ -28,26 +39,25 @@ type Prediction = {
 function getBestThirds(allGroupMatches: Record<string, MatchForTable[]>): Set<string> {
   const thirds = Object.entries(allGroupMatches).flatMap(([, matches]) => {
     const standings = computeStandings(matches);
-    // Only consider the 3rd-place team if it has played at least one counted match
     const third = standings[2];
     if (!third || !matches.some((m) => m.counted)) return [];
     return [third];
   });
 
-  // Sort all third-place teams by the same criteria used inside group tables
   thirds.sort(compareThird);
-
-  // Top 8 qualify
   return new Set(thirds.slice(0, 8).map((s) => s.teamId));
 }
 
 export default function MatchList({
   matchesByGroup,
+  knockoutMatches = [],
   predictionsMap,
 }: {
   matchesByGroup: Record<string, Match[]>;
+  knockoutMatches?: Match[];
   predictionsMap: Record<string, Prediction>;
 }) {
+  const [stage, setStage] = useState<"groups" | "knockout">("groups");
   const [activeGroup, setActiveGroup] = useState("A");
   const groups = Object.keys(matchesByGroup).sort();
 
@@ -59,7 +69,7 @@ export default function MatchList({
     setSessionPredictions((prev) => ({ ...prev, [matchId]: { homeScore, awayScore } }));
   }
 
-  // Build MatchForTable arrays for every group (needed to compute best thirds across all groups)
+  // Build MatchForTable arrays for every group
   const allPredMatchesByGroup: Record<string, MatchForTable[]> = {};
   const allRealMatchesByGroup: Record<string, MatchForTable[]> = {};
 
@@ -86,11 +96,9 @@ export default function MatchList({
     }));
   }
 
-  // Compute which 3rd-place teams qualify across ALL groups
   const predBestThirds = getBestThirds(allPredMatchesByGroup);
   const realBestThirds = getBestThirds(allRealMatchesByGroup);
 
-  // Get the 3rd-place team for the active group (to pass thirdQualifies)
   function getThirdTeamId(matchesForTable: MatchForTable[]): string | null {
     const standings = computeStandings(matchesForTable);
     return standings[2]?.teamId ?? null;
@@ -101,54 +109,129 @@ export default function MatchList({
 
   const activeMatches = matchesByGroup[activeGroup] ?? [];
 
+  // Group knockout matches by stage
+  const knockoutByStage = knockoutMatches.reduce((acc, m) => {
+    if (!acc[m.stage]) acc[m.stage] = [];
+    acc[m.stage].push(m);
+    return acc;
+  }, {} as Record<string, Match[]>);
+
+  const hasKnockout = knockoutMatches.length > 0;
+
   return (
     <div>
-      {/* Group tabs - horizontally scrollable on mobile */}
-      <div className="flex gap-2 mb-6 overflow-x-auto pb-2 -mx-6 px-6 scrollbar-none">
-        {groups.map((group) => (
+      {/* Stage toggle — title left, toggle right, matching Fases page */}
+      <div className="flex flex-col md:flex-row md:items-center items-start justify-between mb-6 ">
+        <h1 className="text-2xl font-bold text-cyan-700 mb-3 md:mb-0">Pronósticos</h1>
+        <div className="flex items-center bg-white border border-gray-200 rounded-full p-1 shadow-sm">
           <button
-            key={group}
-            onClick={() => setActiveGroup(group)}
-            className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors cursor-pointer shrink-0 ${
-              activeGroup === group
-                ? "bg-cyan-700 text-white shadow-xs"
-                : "bg-white border border-gray-200 text-gray-600 hover:bg-gray-50"
+            onClick={() => setStage("groups")}
+            className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all cursor-pointer ${
+              stage === "groups"
+                ? "bg-cyan-600 text-white shadow-sm"
+                : "text-gray-500 hover:text-gray-700"
             }`}
           >
-            Grupo {group}
+            Fase de Grupos
           </button>
-        ))}
+          <button
+            onClick={() => setStage("knockout")}
+            className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all cursor-pointer ${
+              stage === "knockout"
+                ? "bg-cyan-600 text-white shadow-sm"
+                : "text-gray-500 hover:text-gray-700"
+            }`}
+          >
+            Fase Eliminatoria
+          </button>
+        </div>
       </div>
 
-      {/* Both tables side by side on md+, stacked on mobile */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-        <GroupTable
-          matches={allPredMatchesByGroup[activeGroup] ?? []}
-          title="📋 Mis pronósticos"
-          emptyLabel="— ingresa tus pronósticos"
-          accent="cyan"
-          thirdQualifies={!!predThirdId && predBestThirds.has(predThirdId)}
-        />
-        <GroupTable
-          matches={allRealMatchesByGroup[activeGroup] ?? []}
-          title="🏟️ Resultados reales"
-          emptyLabel="— sin resultados aún"
-          accent="violet"
-          thirdQualifies={!!realThirdId && realBestThirds.has(realThirdId)}
-        />
-      </div>
+      {/* ── GROUPS ── */}
+      {stage === "groups" && (
+        <>
+          {/* Group tabs */}
+          <div className="flex gap-2 mb-6 overflow-x-auto pb-2 -mx-6 px-6 scrollbar-none">
+            {groups.map((group) => (
+              <button
+                key={group}
+                onClick={() => setActiveGroup(group)}
+                className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors cursor-pointer shrink-0 ${
+                  activeGroup === group
+                    ? "bg-cyan-700 text-white shadow-xs"
+                    : "bg-white border border-gray-200 text-gray-600 hover:bg-gray-50"
+                }`}
+              >
+                Grupo {group}
+              </button>
+            ))}
+          </div>
 
-      {/* Match cards */}
-      <div className="space-y-3">
-        {activeMatches.map((match) => (
-          <MatchCard
-            key={match.id}
-            match={match}
-            prediction={sessionPredictions[match.id] ?? predictionsMap[match.id]}
-            onSaved={(hs, as_) => onPredictionSaved(match.id, hs, as_)}
-          />
-        ))}
-      </div>
+          {/* Both tables side by side */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            <GroupTable
+              matches={allPredMatchesByGroup[activeGroup] ?? []}
+              title="📋 Mis pronósticos"
+              emptyLabel="— ingresa tus pronósticos"
+              accent="cyan"
+              thirdQualifies={!!predThirdId && predBestThirds.has(predThirdId)}
+            />
+            <GroupTable
+              matches={allRealMatchesByGroup[activeGroup] ?? []}
+              title="🏟️ Resultados reales"
+              emptyLabel="— sin resultados aún"
+              accent="violet"
+              thirdQualifies={!!realThirdId && realBestThirds.has(realThirdId)}
+            />
+          </div>
+
+          {/* Match cards */}
+          <div className="space-y-3">
+            {activeMatches.map((match) => (
+              <MatchCard
+                key={match.id}
+                match={match}
+                prediction={sessionPredictions[match.id] ?? predictionsMap[match.id]}
+                onSaved={(hs, as_) => onPredictionSaved(match.id, hs, as_)}
+              />
+            ))}
+          </div>
+        </>
+      )}
+
+      {/* ── KNOCKOUT ── */}
+      {stage === "knockout" && (
+        <div className="space-y-8">
+          {!hasKnockout && (
+            <div className="bg-white rounded-xl border border-gray-200 p-10 text-center">
+              <p className="text-gray-400 text-sm">
+                La fase eliminatoria aún no ha comenzado.
+              </p>
+              <p className="text-gray-300 text-xs mt-1">
+                Los partidos aparecerán aquí una vez que se definan los clasificados.
+              </p>
+            </div>
+          )}
+
+          {STAGE_ORDER.filter((s) => knockoutByStage[s]?.length).map((stageKey) => (
+            <section key={stageKey}>
+              <h2 className="text-sm font-bold text-gray-500 uppercase tracking-widest mb-3">
+                {STAGE_LABELS[stageKey] ?? stageKey}
+              </h2>
+              <div className="space-y-3">
+                {knockoutByStage[stageKey].map((match) => (
+                  <MatchCard
+                    key={match.id}
+                    match={match}
+                    prediction={sessionPredictions[match.id] ?? predictionsMap[match.id]}
+                    onSaved={(hs, as_) => onPredictionSaved(match.id, hs, as_)}
+                  />
+                ))}
+              </div>
+            </section>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -171,25 +254,16 @@ function MatchCard({
   const matchDate = new Date(match.matchDate);
   const isPast = matchDate < new Date();
 
-  // Debounced auto-save effect
-  import("react").then(({ useEffect }) => {
-    // Note: We use dynamic check or standard react import to be safe, but since React is in scope, 
-    // we can use useEffect directly because it was imported at the top of the file!
-  });
-
-  // Since useEffect is already imported at the top of the file, we can use it directly.
   const { useEffect } = require("react");
 
   useEffect(() => {
     const initialHome = prediction?.homeScore ?? "";
     const initialAway = prediction?.awayScore ?? "";
 
-    // If the input scores match the initial predictions in DB, skip saving
     if (home === initialHome && away === initialAway) {
       return;
     }
 
-    // Do not save if either input is empty (both scores are required for a valid prediction)
     if (home === "" || away === "") {
       setSaveStatus("idle");
       return;
@@ -218,7 +292,7 @@ function MatchCard({
       } catch (err) {
         setSaveStatus("error");
       }
-    }, 600); // 600ms debounce delay
+    }, 600);
 
     return () => clearTimeout(timer);
   }, [home, away, match.id, onSaved, prediction]);
@@ -241,7 +315,6 @@ function MatchCard({
         </span>
       );
     }
-    
     if (saveStatus === "saving") {
       return (
         <div className="flex items-center gap-1.5 text-xs text-cyan-600 font-semibold bg-cyan-50 px-2 py-0.5 rounded-md animate-pulse">
@@ -281,23 +354,21 @@ function MatchCard({
     <div className={`bg-white rounded-xl border p-4 transition-all duration-200 hover:shadow-xs ${
       saveStatus === "saved" ? "border-cyan-200 bg-cyan-50/10" : "border-gray-200"
     }`}>
-      {/* Responsive layout: stacked flex-col on mobile, single flex-row on desktop */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 md:gap-4">
-        
-        {/* Date / Time Row (top row on mobile, left column on desktop) */}
+
+        {/* Date / Time */}
         <div className="flex justify-between md:justify-start items-center md:w-28 md:shrink-0 text-xs text-gray-400 font-medium">
           <div>
             {matchDate.toLocaleDateString("es", { day: "numeric", month: "short", timeZone: "America/Guayaquil" })}
             <span className="mx-1.5">•</span>
             {matchDate.toLocaleTimeString("es", { hour: "2-digit", minute: "2-digit", timeZone: "America/Guayaquil" })}
           </div>
-          {/* On mobile: display the save status or match status on the right */}
           <div className="md:hidden">
             {renderStatus()}
           </div>
         </div>
 
-        {/* Team Matchup and Inputs (middle on both mobile & desktop) */}
+        {/* Team Matchup and Inputs */}
         <div className="flex items-center justify-between gap-2 md:gap-4 flex-1 text-gray-700">
           {/* Home Team */}
           <div className="flex items-center justify-end gap-2 flex-1 text-right min-w-0">
@@ -307,7 +378,7 @@ function MatchCard({
             <span className={`${getFlagClass(match.homeTeam.code)} shrink-0 shadow-3xs rounded-xs`} />
           </div>
 
-          {/* Scores input container */}
+          {/* Score inputs */}
           <div className="flex items-center gap-1.5 shrink-0 bg-slate-50 p-1 rounded-lg border border-slate-100">
             <input
               type="number"
@@ -343,11 +414,10 @@ function MatchCard({
           </div>
         </div>
 
-        {/* Right Column (Save/Status - hidden on mobile, visible on desktop) */}
+        {/* Right status (desktop) */}
         <div className="hidden md:flex md:w-28 md:shrink-0 md:justify-end">
           {renderStatus()}
         </div>
-
       </div>
     </div>
   );

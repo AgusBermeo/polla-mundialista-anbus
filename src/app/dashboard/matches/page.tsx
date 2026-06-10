@@ -17,13 +17,17 @@ export default async function MatchesPage() {
     }),
   ]);
 
-  // Agrupar partidos por grupo
-  const matchesByGroup = matches.reduce((acc, match) => {
+  // Separate group vs knockout
+  const groupMatches = matches.filter((m) => m.stage === "GROUP");
+  const knockoutMatches = matches.filter((m) => m.stage !== "GROUP");
+
+  // Agrupar partidos de grupos por grupo
+  const matchesByGroup = groupMatches.reduce((acc, match) => {
     const group = match.homeTeam.group;
     if (!acc[group]) acc[group] = [];
     acc[group].push(match);
     return acc;
-  }, {} as Record<string, typeof matches>);
+  }, {} as Record<string, typeof groupMatches>);
 
   // Convertir pronósticos a un mapa para fácil acceso
   const predictionsMap = predictions.reduce((acc, pred) => {
@@ -33,9 +37,9 @@ export default async function MatchesPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-6 text-cyan-700">Pronósticos</h1>
       <MatchList
         matchesByGroup={matchesByGroup}
+        knockoutMatches={knockoutMatches}
         predictionsMap={predictionsMap}
       />
     </div>
