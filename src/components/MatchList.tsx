@@ -23,14 +23,22 @@ type Prediction = {
 };
 
 const STAGE_LABELS: Record<string, string> = {
-  ROUND_OF_16: "Octavos de final",
+  ROUND_OF_32:   "Ronda de 32",
+  ROUND_OF_16:   "Octavos de final",
   QUARTER_FINAL: "Cuartos de final",
-  SEMI_FINAL: "Semifinales",
-  THIRD_PLACE: "Tercer puesto",
-  FINAL: "Final",
+  SEMI_FINAL:    "Semifinales",
+  THIRD_PLACE:   "Tercer puesto",
+  FINAL:         "Final",
 };
 
-const STAGE_ORDER = ["ROUND_OF_16", "QUARTER_FINAL", "SEMI_FINAL", "THIRD_PLACE", "FINAL"];
+const STAGE_ORDER = [
+  "ROUND_OF_32",
+  "ROUND_OF_16",
+  "QUARTER_FINAL",
+  "SEMI_FINAL",
+  "THIRD_PLACE",
+  "FINAL",
+];
 
 /**
  * Given a map of group → MatchForTable[], returns a Set of teamIds
@@ -120,8 +128,8 @@ export default function MatchList({
 
   return (
     <div>
-      {/* Stage toggle — title left, toggle right, matching Fases page */}
-      <div className="flex flex-col md:flex-row md:items-center items-start justify-between mb-6 ">
+      {/* Stage toggle */}
+      <div className="flex flex-col md:flex-row md:items-center items-start justify-between mb-6">
         <h1 className="text-2xl font-bold text-cyan-700 mb-3 md:mb-0">Pronósticos</h1>
         <div className="flex items-center bg-white border border-gray-200 rounded-full p-1 shadow-sm">
           <button

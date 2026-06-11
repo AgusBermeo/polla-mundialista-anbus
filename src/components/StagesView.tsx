@@ -28,11 +28,10 @@ function toMatchForTable(m: Match): MatchForTable {
   };
 }
 
-/** Returns top-2 qualifiers (and the 3rd-place team) for a group */
 function groupQualifiers(matches: Match[]) {
   const forTable = matches.map(toMatchForTable);
   const standings = computeStandings(forTable);
-  return standings; // standings[0] = 1st, standings[1] = 2nd, standings[2] = 3rd
+  return standings;
 }
 
 // ─── Bracket slot ────────────────────────────────────────────────────────────
@@ -42,13 +41,11 @@ function Slot({
   teamName,
   score,
   winner,
-  accent = false,
 }: {
   label: string;
   teamName?: string;
   score?: number | null;
   winner?: boolean;
-  accent?: boolean;
 }) {
   return (
     <div
@@ -57,7 +54,7 @@ function Slot({
         ${!teamName ? "italic text-gray-400 border-dashed" : ""}
       `}
     >
-      <span className={`text-[10px] shrink-0 w-14 truncate ${winner ? "text-cyan-100" : "text-gray-400"}`}>
+      <span className={`text-[10px] shrink-0 w-16 truncate ${winner ? "text-cyan-100" : "text-gray-400"}`}>
         {label}
       </span>
       <span className="flex-1 truncate">{teamName ?? "Por definir"}</span>
@@ -79,6 +76,7 @@ function BracketMatch({
   homeScore,
   awayScore,
   isFinished,
+  matchDate,
 }: {
   matchLabel: string;
   homeLabel: string;
@@ -88,39 +86,25 @@ function BracketMatch({
   homeScore?: number | null;
   awayScore?: number | null;
   isFinished?: boolean;
+  matchDate?: Date;
 }) {
   const homeWins = isFinished && homeScore != null && awayScore != null && homeScore > awayScore;
   const awayWins = isFinished && homeScore != null && awayScore != null && awayScore > homeScore;
 
   return (
-    <div className="flex flex-col gap-0.5 w-52">
-      <span className="text-[10px] text-gray-400 font-semibold uppercase tracking-wide mb-1 px-1">
-        {matchLabel}
-      </span>
+    <div className="flex flex-col gap-0.5 w-56">
+      <div className="flex items-center justify-between mb-1 px-1">
+        <span className="text-[10px] text-gray-400 font-semibold uppercase tracking-wide">
+          {matchLabel}
+        </span>
+        {matchDate && (
+          <span className="text-[10px] text-gray-300">
+            {new Date(matchDate).toLocaleDateString("es", { day: "numeric", month: "short", timeZone: "America/Guayaquil" })}
+          </span>
+        )}
+      </div>
       <Slot label={homeLabel} teamName={homeTeam} score={isFinished ? homeScore : undefined} winner={homeWins} />
       <Slot label={awayLabel} teamName={awayTeam} score={isFinished ? awayScore : undefined} winner={awayWins} />
-    </div>
-  );
-}
-
-// ─── Connector line ───────────────────────────────────────────────────────────
-
-function Connector() {
-  return (
-    <div className="flex items-center self-center">
-      <div className="w-4 h-px bg-gray-300" />
-    </div>
-  );
-}
-
-// ─── Vertical bracket line ────────────────────────────────────────────────────
-
-function VConnector() {
-  return (
-    <div className="flex flex-col items-center justify-center self-stretch w-4">
-      <div className="flex-1 border-r border-gray-300" />
-      <div className="w-4 h-px bg-gray-300" />
-      <div className="flex-1 border-r border-gray-300" />
     </div>
   );
 }
@@ -145,7 +129,6 @@ function KnockoutBracket({
   matchesByGroup: Record<string, Match[]>;
   knockoutMatches: KnockoutMatch[];
 }) {
-  // Derive group qualifiers from standings
   const qualifiers: Record<string, { first?: string; second?: string; third?: string }> = {};
   for (const [group, matches] of Object.entries(matchesByGroup)) {
     const standings = groupQualifiers(matches);
@@ -156,70 +139,143 @@ function KnockoutBracket({
     };
   }
 
-  // Helper: get knockout match by stage index
-  const byStage = (stage: string) =>
-    knockoutMatches.filter((m) => m.stage === stage);
+  const byStage = (stage: string) => knockoutMatches.filter((m) => m.stage === stage);
 
+  const r32 = byStage("ROUND_OF_32");
   const r16 = byStage("ROUND_OF_16");
-  const qf = byStage("QUARTER_FINAL");
-  const sf = byStage("SEMI_FINAL");
-  const tp = byStage("THIRD_PLACE");
+  const qf  = byStage("QUARTER_FINAL");
+  const sf  = byStage("SEMI_FINAL");
+  const tp  = byStage("THIRD_PLACE");
   const fin = byStage("FINAL");
 
-  // Derive a team name for a knockout match slot
   function kTeam(match?: KnockoutMatch, side?: "home" | "away") {
     if (!match) return undefined;
     return side === "home" ? match.homeTeam?.name : match.awayTeam?.name;
   }
 
-  // Round of 16 slot labels based on FIFA 2026 bracket seeding
-  // Groups: A-L, 48 teams, 8 best thirds qualify
-  // Standard bracket pairings (approximate):
-  const r16Pairings = [
-    { matchLabel: "R16-1", homeLabel: "1A", awayLabel: "2B", home: qualifiers["A"]?.first, away: qualifiers["B"]?.second },
-    { matchLabel: "R16-2", homeLabel: "1C", awayLabel: "2D", home: qualifiers["C"]?.first, away: qualifiers["D"]?.second },
-    { matchLabel: "R16-3", homeLabel: "1E", awayLabel: "2F", home: qualifiers["E"]?.first, away: qualifiers["F"]?.second },
-    { matchLabel: "R16-4", homeLabel: "1G", awayLabel: "2H", home: qualifiers["G"]?.first, away: qualifiers["H"]?.second },
-    { matchLabel: "R16-5", homeLabel: "1I", awayLabel: "2J", home: qualifiers["I"]?.first, away: qualifiers["J"]?.second },
-    { matchLabel: "R16-6", homeLabel: "1K", awayLabel: "2L", home: qualifiers["K"]?.first, away: qualifiers["L"]?.second },
-    { matchLabel: "R16-7", homeLabel: "1B", awayLabel: "3rd", home: qualifiers["B"]?.first, away: undefined },
-    { matchLabel: "R16-8", homeLabel: "1D", awayLabel: "3rd", home: qualifiers["D"]?.first, away: undefined },
-    { matchLabel: "R16-9", homeLabel: "1F", awayLabel: "3rd", home: qualifiers["F"]?.first, away: undefined },
-    { matchLabel: "R16-10", homeLabel: "1H", awayLabel: "3rd", home: qualifiers["H"]?.first, away: undefined },
-    { matchLabel: "R16-11", homeLabel: "1J", awayLabel: "3rd", home: qualifiers["J"]?.first, away: undefined },
-    { matchLabel: "R16-12", homeLabel: "1L", awayLabel: "3rd", home: qualifiers["L"]?.first, away: undefined },
-    { matchLabel: "R16-13", homeLabel: "2A", awayLabel: "3rd", home: qualifiers["A"]?.second, away: undefined },
-    { matchLabel: "R16-14", homeLabel: "2C", awayLabel: "3rd", home: qualifiers["C"]?.second, away: undefined },
-    { matchLabel: "R16-15", homeLabel: "2E", awayLabel: "3rd", home: qualifiers["E"]?.second, away: undefined },
-    { matchLabel: "R16-16", homeLabel: "2G", awayLabel: "3rd", home: qualifiers["G"]?.second, away: undefined },
+  // Official FIFA 2026 Round of 32 pairings (matches 73–88)
+  // https://en.wikipedia.org/wiki/2026_FIFA_World_Cup_knockout_stage
+  const r32Pairings = [
+    // Match 73 – June 28
+    { num: 73, matchLabel: "Partido 73", homeLabel: "2.° Grupo A", awayLabel: "2.° Grupo B",
+      home: qualifiers["A"]?.second, away: qualifiers["B"]?.second,
+      date: new Date("2026-06-28T14:00:00Z") },
+    // Match 74 – June 29
+    { num: 74, matchLabel: "Partido 74", homeLabel: "1.° Grupo E", awayLabel: "Mejor 3.° A/B/C/D/F",
+      home: qualifiers["E"]?.first, away: undefined,
+      date: new Date("2026-06-29T15:30:00Z") },
+    // Match 75 – June 29
+    { num: 75, matchLabel: "Partido 75", homeLabel: "1.° Grupo F", awayLabel: "2.° Grupo C",
+      home: qualifiers["F"]?.first, away: qualifiers["C"]?.second,
+      date: new Date("2026-06-29T20:00:00Z") },
+    // Match 76 – June 29
+    { num: 76, matchLabel: "Partido 76", homeLabel: "1.° Grupo C", awayLabel: "2.° Grupo F",
+      home: qualifiers["C"]?.first, away: qualifiers["F"]?.second,
+      date: new Date("2026-06-29T12:00:00Z") },
+    // Match 77 – June 30
+    { num: 77, matchLabel: "Partido 77", homeLabel: "1.° Grupo I", awayLabel: "Mejor 3.° C/D/F/G/H",
+      home: qualifiers["I"]?.first, away: undefined,
+      date: new Date("2026-06-30T16:00:00Z") },
+    // Match 78 – June 30
+    { num: 78, matchLabel: "Partido 78", homeLabel: "2.° Grupo E", awayLabel: "2.° Grupo I",
+      home: qualifiers["E"]?.second, away: qualifiers["I"]?.second,
+      date: new Date("2026-06-30T12:00:00Z") },
+    // Match 79 – June 30
+    { num: 79, matchLabel: "Partido 79", homeLabel: "1.° Grupo A", awayLabel: "Mejor 3.° C/E/F/H/I",
+      home: qualifiers["A"]?.first, away: undefined,
+      date: new Date("2026-06-30T20:00:00Z") },
+    // Match 80 – July 1
+    { num: 80, matchLabel: "Partido 80", homeLabel: "1.° Grupo L", awayLabel: "Mejor 3.° E/H/I/J/K",
+      home: qualifiers["L"]?.first, away: undefined,
+      date: new Date("2026-07-01T11:00:00Z") },
+    // Match 81 – July 1
+    { num: 81, matchLabel: "Partido 81", homeLabel: "1.° Grupo D", awayLabel: "Mejor 3.° B/E/F/I/J",
+      home: qualifiers["D"]?.first, away: undefined,
+      date: new Date("2026-07-01T19:00:00Z") },
+    // Match 82 – July 1
+    { num: 82, matchLabel: "Partido 82", homeLabel: "1.° Grupo G", awayLabel: "Mejor 3.° A/E/H/I/J",
+      home: qualifiers["G"]?.first, away: undefined,
+      date: new Date("2026-07-01T15:00:00Z") },
+    // Match 83 – July 2
+    { num: 83, matchLabel: "Partido 83", homeLabel: "2.° Grupo K", awayLabel: "2.° Grupo L",
+      home: qualifiers["K"]?.second, away: qualifiers["L"]?.second,
+      date: new Date("2026-07-02T18:00:00Z") },
+    // Match 84 – July 2
+    { num: 84, matchLabel: "Partido 84", homeLabel: "1.° Grupo H", awayLabel: "2.° Grupo J",
+      home: qualifiers["H"]?.first, away: qualifiers["J"]?.second,
+      date: new Date("2026-07-02T14:00:00Z") },
+    // Match 85 – July 2
+    { num: 85, matchLabel: "Partido 85", homeLabel: "1.° Grupo B", awayLabel: "Mejor 3.° E/F/G/I/J",
+      home: qualifiers["B"]?.first, away: undefined,
+      date: new Date("2026-07-02T22:00:00Z") },
+    // Match 86 – July 3
+    { num: 86, matchLabel: "Partido 86", homeLabel: "1.° Grupo J", awayLabel: "2.° Grupo H",
+      home: qualifiers["J"]?.first, away: qualifiers["H"]?.second,
+      date: new Date("2026-07-03T17:00:00Z") },
+    // Match 87 – July 3
+    { num: 87, matchLabel: "Partido 87", homeLabel: "1.° Grupo K", awayLabel: "Mejor 3.° D/E/I/J/L",
+      home: qualifiers["K"]?.first, away: undefined,
+      date: new Date("2026-07-03T20:30:00Z") },
+    // Match 88 – July 3
+    { num: 88, matchLabel: "Partido 88", homeLabel: "2.° Grupo D", awayLabel: "2.° Grupo G",
+      home: qualifiers["D"]?.second, away: qualifiers["G"]?.second,
+      date: new Date("2026-07-03T13:00:00Z") },
   ];
 
-  // Override with actual knockout match data if available
-  function resolveMatch(index: number, pairings: typeof r16Pairings, matches: KnockoutMatch[]) {
-    const pairing = pairings[index];
-    const match = matches[index];
-    return {
-      matchLabel: pairing?.matchLabel ?? `Partido ${index + 1}`,
-      homeLabel: pairing?.homeLabel ?? "Local",
-      awayLabel: pairing?.awayLabel ?? "Visitante",
-      homeTeam: match ? kTeam(match, "home") : pairing?.home,
-      awayTeam: match ? kTeam(match, "away") : pairing?.away,
-      homeScore: match?.homeScore,
-      awayScore: match?.awayScore,
-      isFinished: match?.isFinished,
-    };
-  }
+  // Round of 16 pairings (matches 89–96)
+  const r16Pairings = [
+    { matchLabel: "Partido 89", homeLabel: "G. P74", awayLabel: "G. P77", date: new Date("2026-07-04T16:00:00Z") },
+    { matchLabel: "Partido 90", homeLabel: "G. P73", awayLabel: "G. P75", date: new Date("2026-07-04T12:00:00Z") },
+    { matchLabel: "Partido 91", homeLabel: "G. P76", awayLabel: "G. P78", date: new Date("2026-07-05T15:00:00Z") },
+    { matchLabel: "Partido 92", homeLabel: "G. P79", awayLabel: "G. P80", date: new Date("2026-07-05T19:00:00Z") },
+    { matchLabel: "Partido 93", homeLabel: "G. P83", awayLabel: "G. P84", date: new Date("2026-07-06T14:00:00Z") },
+    { matchLabel: "Partido 94", homeLabel: "G. P81", awayLabel: "G. P82", date: new Date("2026-07-06T19:00:00Z") },
+    { matchLabel: "Partido 95", homeLabel: "G. P86", awayLabel: "G. P88", date: new Date("2026-07-07T11:00:00Z") },
+    { matchLabel: "Partido 96", homeLabel: "G. P85", awayLabel: "G. P87", date: new Date("2026-07-07T15:00:00Z") },
+  ];
 
-  const stageLabels: Record<string, string> = {
-    ROUND_OF_16: "Octavos de final",
-    QUARTER_FINAL: "Cuartos de final",
-    SEMI_FINAL: "Semifinales",
-    THIRD_PLACE: "Tercer puesto",
-    FINAL: "Final",
-  };
+  // Quarter-finals (matches 97–100)
+  const qfPairings = [
+    { matchLabel: "Partido 97", homeLabel: "G. P89", awayLabel: "G. P90", date: new Date("2026-07-09T15:00:00Z") },
+    { matchLabel: "Partido 98", homeLabel: "G. P93", awayLabel: "G. P94", date: new Date("2026-07-10T14:00:00Z") },
+    { matchLabel: "Partido 99", homeLabel: "G. P91", awayLabel: "G. P92", date: new Date("2026-07-11T16:00:00Z") },
+    { matchLabel: "Partido 100", homeLabel: "G. P95", awayLabel: "G. P96", date: new Date("2026-07-11T20:00:00Z") },
+  ];
+
+  // Semi-finals (matches 101–102)
+  const sfPairings = [
+    { matchLabel: "Partido 101", homeLabel: "G. P97", awayLabel: "G. P98", date: new Date("2026-07-14T14:00:00Z") },
+    { matchLabel: "Partido 102", homeLabel: "G. P99", awayLabel: "G. P100", date: new Date("2026-07-15T14:00:00Z") },
+  ];
 
   return (
     <div className="space-y-10">
+      {/* Round of 32 */}
+      <section>
+        <h2 className="text-sm font-bold text-gray-500 uppercase tracking-widest mb-4">
+          Ronda de 32
+        </h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {r32Pairings.map((p, i) => {
+            const m = r32[i];
+            return (
+              <BracketMatch
+                key={p.matchLabel}
+                matchLabel={p.matchLabel}
+                homeLabel={p.homeLabel}
+                awayLabel={p.awayLabel}
+                homeTeam={m ? kTeam(m, "home") : p.home}
+                awayTeam={m ? kTeam(m, "away") : p.away}
+                homeScore={m?.homeScore}
+                awayScore={m?.awayScore}
+                isFinished={m?.isFinished}
+                matchDate={m?.matchDate ?? p.date}
+              />
+            );
+          })}
+        </div>
+      </section>
+
       {/* Round of 16 */}
       <section>
         <h2 className="text-sm font-bold text-gray-500 uppercase tracking-widest mb-4">
@@ -234,61 +290,64 @@ function KnockoutBracket({
                 matchLabel={p.matchLabel}
                 homeLabel={p.homeLabel}
                 awayLabel={p.awayLabel}
-                homeTeam={m ? kTeam(m, "home") : p.home}
-                awayTeam={m ? kTeam(m, "away") : p.away}
+                homeTeam={m ? kTeam(m, "home") : undefined}
+                awayTeam={m ? kTeam(m, "away") : undefined}
                 homeScore={m?.homeScore}
                 awayScore={m?.awayScore}
                 isFinished={m?.isFinished}
+                matchDate={m?.matchDate ?? p.date}
               />
             );
           })}
         </div>
       </section>
 
-      {/* Quarters */}
+      {/* Quarter-finals */}
       <section>
         <h2 className="text-sm font-bold text-gray-500 uppercase tracking-widest mb-4">
           Cuartos de final
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {Array.from({ length: 8 }).map((_, i) => {
+          {qfPairings.map((p, i) => {
             const m = qf[i];
             return (
               <BracketMatch
-                key={i}
-                matchLabel={`QF-${i + 1}`}
-                homeLabel={`G R16-${i * 2 + 1}`}
-                awayLabel={`G R16-${i * 2 + 2}`}
+                key={p.matchLabel}
+                matchLabel={p.matchLabel}
+                homeLabel={p.homeLabel}
+                awayLabel={p.awayLabel}
                 homeTeam={m ? kTeam(m, "home") : undefined}
                 awayTeam={m ? kTeam(m, "away") : undefined}
                 homeScore={m?.homeScore}
                 awayScore={m?.awayScore}
                 isFinished={m?.isFinished}
+                matchDate={m?.matchDate ?? p.date}
               />
             );
           })}
         </div>
       </section>
 
-      {/* Semis */}
+      {/* Semi-finals */}
       <section>
         <h2 className="text-sm font-bold text-gray-500 uppercase tracking-widest mb-4">
           Semifinales
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {Array.from({ length: 4 }).map((_, i) => {
+          {sfPairings.map((p, i) => {
             const m = sf[i];
             return (
               <BracketMatch
-                key={i}
-                matchLabel={`SF-${i + 1}`}
-                homeLabel={`G QF-${i * 2 + 1}`}
-                awayLabel={`G QF-${i * 2 + 2}`}
+                key={p.matchLabel}
+                matchLabel={p.matchLabel}
+                homeLabel={p.homeLabel}
+                awayLabel={p.awayLabel}
                 homeTeam={m ? kTeam(m, "home") : undefined}
                 awayTeam={m ? kTeam(m, "away") : undefined}
                 homeScore={m?.homeScore}
                 awayScore={m?.awayScore}
                 isFinished={m?.isFinished}
+                matchDate={m?.matchDate ?? p.date}
               />
             );
           })}
@@ -305,14 +364,15 @@ function KnockoutBracket({
             const m = tp[0];
             return (
               <BracketMatch
-                matchLabel="3er Lugar"
-                homeLabel="Perdedor SF-1/2"
-                awayLabel="Perdedor SF-3/4"
+                matchLabel="Partido 103"
+                homeLabel="Perd. P101"
+                awayLabel="Perd. P102"
                 homeTeam={m ? kTeam(m, "home") : undefined}
                 awayTeam={m ? kTeam(m, "away") : undefined}
                 homeScore={m?.homeScore}
                 awayScore={m?.awayScore}
                 isFinished={m?.isFinished}
+                matchDate={m?.matchDate ?? new Date("2026-07-18T16:00:00Z")}
               />
             );
           })()}
@@ -326,14 +386,15 @@ function KnockoutBracket({
             const m = fin[0];
             return (
               <BracketMatch
-                matchLabel="Gran Final"
-                homeLabel="G SF-1/2"
-                awayLabel="G SF-3/4"
+                matchLabel="Partido 104"
+                homeLabel="G. P101"
+                awayLabel="G. P102"
                 homeTeam={m ? kTeam(m, "home") : undefined}
                 awayTeam={m ? kTeam(m, "away") : undefined}
                 homeScore={m?.homeScore}
                 awayScore={m?.awayScore}
                 isFinished={m?.isFinished}
+                matchDate={m?.matchDate ?? new Date("2026-07-19T14:00:00Z")}
               />
             );
           })()}
@@ -387,7 +448,6 @@ export default function StagesView({
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-cyan-700">Fases</h1>
 
-        {/* Toggle */}
         <div className="flex items-center bg-white border border-gray-200 rounded-full p-1 shadow-sm">
           <button
             onClick={() => setStage("groups")}
