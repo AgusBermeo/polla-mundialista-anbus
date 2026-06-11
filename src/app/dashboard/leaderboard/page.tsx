@@ -172,9 +172,6 @@ export default async function LeaderboardPage() {
                             }`}
                           >
                             {pred.homeScore} – {pred.awayScore}
-                            {predResult === "exact" && <span title="Marcador exacto" className="text-emerald-500">✓✓</span>}
-                            {predResult === "winner" && <span title="Ganador correcto" className="text-cyan-500">✓</span>}
-                            {predResult === "wrong" && <span title="Incorrecto" className="text-red-400">✗</span>}
                           </span>
                         ) : (
                           <span className="text-xs text-gray-300 italic">—</span>
@@ -206,15 +203,15 @@ export default async function LeaderboardPage() {
       {spotlightMatch?.isFinished && (
         <div className="mt-3 flex flex-wrap gap-3 px-1">
           <span className="flex items-center gap-1.5 text-xs text-gray-400">
-            <span className="bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded font-bold text-[11px]">1–0 ✓✓</span>
+            <span className="bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded font-bold text-[11px]">1–0</span>
             Marcador exacto
           </span>
           <span className="flex items-center gap-1.5 text-xs text-gray-400">
-            <span className="bg-cyan-50 text-cyan-700 border border-cyan-100 px-2 py-0.5 rounded font-bold text-[11px]">2–0 ✓</span>
+            <span className="bg-cyan-50 text-cyan-700 border border-cyan-100 px-2 py-0.5 rounded font-bold text-[11px]">2–0</span>
             Ganador correcto
           </span>
           <span className="flex items-center gap-1.5 text-xs text-gray-400">
-            <span className="bg-red-50 text-red-500 px-2 py-0.5 rounded font-bold text-[11px]">0–1 ✗</span>
+            <span className="bg-red-50 text-red-500 px-2 py-0.5 rounded font-bold text-[11px]">0–1</span>
             Incorrecto
           </span>
         </div>

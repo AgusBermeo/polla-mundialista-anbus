@@ -62,7 +62,7 @@ function ScoringInfoBox() {
             3
           </span>
           <span className="text-cyan-800 font-medium">
-            Pronóstico con marcador exacto
+            Marcador exacto
           </span>
         </div>
         <div className="hidden sm:block w-px h-4 bg-cyan-200 shrink-0" />
@@ -71,7 +71,7 @@ function ScoringInfoBox() {
             1
           </span>
           <span className="text-gray-500 font-medium">
-            Solo acertar el ganador
+            Ganador correcto
           </span>
         </div>
       </div>
