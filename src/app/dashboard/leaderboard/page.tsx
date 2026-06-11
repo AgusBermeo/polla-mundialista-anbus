@@ -69,7 +69,7 @@ export default async function LeaderboardPage() {
 
           <div className="flex items-center gap-2 flex-1 min-w-0">
             <span className={`${getFlagClass(spotlightMatch.homeTeam.code)} shadow-sm rounded-xs shrink-0`} />
-            <span className="font-semibold text-sm text-gray-800 truncate">{spotlightMatch.homeTeam.name}</span>
+            <span className="font-semibold text-sm text-gray-800 truncate sm:inline hidden">{spotlightMatch.homeTeam.name}</span>
             {spotlightMatch.isFinished ? (
               <span className="text-sm font-extrabold text-gray-700 shrink-0">
                 {spotlightMatch.homeScore} – {spotlightMatch.awayScore}
@@ -77,7 +77,7 @@ export default async function LeaderboardPage() {
             ) : (
               <span className="text-xs text-gray-400 shrink-0">vs</span>
             )}
-            <span className="font-semibold text-sm text-gray-800 truncate">{spotlightMatch.awayTeam.name}</span>
+            <span className="font-semibold text-sm text-gray-800 truncate sm:inline hidden">{spotlightMatch.awayTeam.name}</span>
             <span className={`${getFlagClass(spotlightMatch.awayTeam.code)} shadow-sm rounded-xs shrink-0`} />
           </div>
 
@@ -95,12 +95,12 @@ export default async function LeaderboardPage() {
           <table className="w-full">
             <thead>
               <tr className="border-b border-gray-100 bg-gray-50">
-                <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 w-10">#</th>
+                <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 w-8">#</th>
                 <th className="text-left px-4 py-3 text-xs font-medium text-gray-500">Jugador</th>
                 <th className="text-center px-4 py-3 text-xs font-medium text-gray-500 hidden sm:table-cell">Pronósticos</th>
                 {spotlightMatch && (
                   <th className="text-center px-4 py-3 text-xs font-medium text-gray-500 whitespace-nowrap">
-                    Su pronóstico
+                    Pronóstico
                   </th>
                 )}
                 <th className="text-center px-4 py-3 text-xs font-medium text-gray-500">Puntos</th>
