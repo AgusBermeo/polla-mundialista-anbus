@@ -40,10 +40,6 @@ const STAGE_ORDER = [
   "FINAL",
 ];
 
-/**
- * Given a map of group → MatchForTable[], returns a Set of teamIds
- * that are among the best 8 third-place finishers across all groups.
- */
 function getBestThirds(allGroupMatches: Record<string, MatchForTable[]>): Set<string> {
   const thirds = Object.entries(allGroupMatches).flatMap(([, matches]) => {
     const standings = computeStandings(matches);
@@ -54,6 +50,33 @@ function getBestThirds(allGroupMatches: Record<string, MatchForTable[]>): Set<st
 
   thirds.sort(compareThird);
   return new Set(thirds.slice(0, 8).map((s) => s.teamId));
+}
+
+function ScoringInfoBox() {
+  return (
+    <div className="flex items-center gap-3 bg-cyan-50 border border-cyan-100 rounded-xl px-4 py-3.5 mb-6">
+      <span className="text-sm text-cyan-700 bowlby-one">Puntaje:</span>
+      <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-6 text-sm">
+        <div className="flex items-center gap-2">
+          <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-cyan-600 text-white text-xs font-extrabold shrink-0">
+            3
+          </span>
+          <span className="text-cyan-800 font-medium">
+            Pronóstico con marcador exacto
+          </span>
+        </div>
+        <div className="hidden sm:block w-px h-4 bg-cyan-200 shrink-0" />
+        <div className="flex items-center gap-2">
+          <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-gray-200 text-gray-500 text-xs font-extrabold shrink-0">
+            1
+          </span>
+          <span className="text-gray-500 font-medium">
+            Solo acertar el ganador
+          </span>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export default function MatchList({
@@ -77,7 +100,6 @@ export default function MatchList({
     setSessionPredictions((prev) => ({ ...prev, [matchId]: { homeScore, awayScore } }));
   }
 
-  // Build MatchForTable arrays for every group
   const allPredMatchesByGroup: Record<string, MatchForTable[]> = {};
   const allRealMatchesByGroup: Record<string, MatchForTable[]> = {};
 
@@ -117,7 +139,6 @@ export default function MatchList({
 
   const activeMatches = matchesByGroup[activeGroup] ?? [];
 
-  // Group knockout matches by stage
   const knockoutByStage = knockoutMatches.reduce((acc, m) => {
     if (!acc[m.stage]) acc[m.stage] = [];
     acc[m.stage].push(m);
@@ -154,6 +175,9 @@ export default function MatchList({
           </button>
         </div>
       </div>
+
+      {/* Scoring info box */}
+      <ScoringInfoBox />
 
       {/* ── GROUPS ── */}
       {stage === "groups" && (

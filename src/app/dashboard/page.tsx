@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { createClient } from "@/lib/supabase/server";
+import { getFlagClass } from "@/lib/teamFlags";
 import Link from "next/link";
 
 
@@ -44,6 +45,17 @@ export default async function DashboardPage() {
     take: 3,
   });
 
+  // Próximos 4 partidos (todos, independiente de pronóstico o fase)
+  const next4Matches = await prisma.match.findMany({
+    where: {
+      isFinished: false,
+      matchDate: { gte: new Date() },
+    },
+    include: { homeTeam: true, awayTeam: true },
+    orderBy: { matchDate: "asc" },
+    take: 4,
+  });
+
   return (
     <div>
       <h1 className="text-2xl font-bold text-cyan-700">
@@ -77,6 +89,81 @@ export default async function DashboardPage() {
           <p className="text-3xl font-bold mt-1 text-cyan-700">{totalMatches - totalPredictions}</p>
         </div>
       </div>
+
+      {/* Próximos 4 partidos */}
+      {next4Matches.length > 0 && (
+        <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-semibold text-cyan-700">Próximos partidos</h2>
+            <Link
+              href="/dashboard/matches"
+              className="text-sm text-cyan-700 hover:underline cursor-pointer flex items-center gap-2"
+            >
+              Ver todos
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-4">
+                <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+              </svg>
+            </Link>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {next4Matches.map((match) => {
+              const matchDate = new Date(match.matchDate);
+              const hasPrediction = predictedMatchIds.has(match.id);
+              return (
+                <Link
+                  key={match.id}
+                  href="/dashboard/matches"
+                  className="flex items-center gap-3 p-3 rounded-xl border border-gray-100 hover:border-cyan-200 hover:bg-cyan-50/30 transition-all group"
+                >
+                  {/* Date/time column */}
+                  <div className="flex flex-col items-center justify-center bg-slate-100 rounded-lg px-3 py-2 shrink-0 min-w-[52px]">
+                    <span className="text-[10px] font-semibold text-gray-400 uppercase">
+                      {matchDate.toLocaleDateString("es", { month: "short", timeZone: "America/Guayaquil" })}
+                    </span>
+                    <span className="text-lg font-extrabold text-gray-700 leading-tight">
+                      {matchDate.toLocaleDateString("es", { day: "numeric", timeZone: "America/Guayaquil" })}
+                    </span>
+                    <span className="text-[10px] text-gray-400">
+                      {matchDate.toLocaleTimeString("es", { hour: "2-digit", minute: "2-digit", timeZone: "America/Guayaquil" })}
+                    </span>
+                  </div>
+
+                  {/* Teams column */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <span className={`${getFlagClass(match.homeTeam.code)} shrink-0 shadow-sm rounded-sm`} style={{ fontSize: "0.9rem" }} />
+                      <span className="text-sm font-semibold text-gray-800 truncate">{match.homeTeam.name}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className={`${getFlagClass(match.awayTeam.code)} shrink-0 shadow-sm rounded-sm`} style={{ fontSize: "0.9rem" }} />
+                      <span className="text-sm font-semibold text-gray-800 truncate">{match.awayTeam.name}</span>
+                    </div>
+                  </div>
+
+                  {/* Status badge */}
+                  <div className="shrink-0 flex flex-col items-end gap-1">
+                    <span className="text-[10px] font-medium text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
+                      Grupo {match.homeTeam.group}
+                    </span>
+                    {hasPrediction ? (
+                      <span className="text-[10px] font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full flex items-center gap-0.5">
+                        <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                        </svg>
+                        Listo
+                      </span>
+                    ) : (
+                      <span className="text-[10px] font-semibold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">
+                        Pendiente
+                      </span>
+                    )}
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Próximos partidos sin pronóstico */}
       {upcomingMatches.length > 0 && (
