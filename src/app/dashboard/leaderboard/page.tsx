@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { createClient } from "@/lib/supabase/server";
 import { getFlagClass } from "@/lib/teamFlags";
+import Link from "next/link";
 
 export default async function LeaderboardPage() {
   const supabase = await createClient();
@@ -21,6 +22,22 @@ export default async function LeaderboardPage() {
     include: { homeTeam: true, awayTeam: true },
     orderBy: { matchDate: "desc" },
   });
+
+  // Next upcoming match (not started, not finished)
+  const nextMatch = await prisma.match.findFirst({
+    where: { matchDate: { gt: now }, isFinished: false },
+    include: { homeTeam: true, awayTeam: true },
+    orderBy: { matchDate: "asc" },
+  });
+
+  // My prediction for the next match
+  let myNextPred: { homeScore: number; awayScore: number } | null = null;
+  if (nextMatch && user) {
+    const pred = await prisma.prediction.findUnique({
+      where: { userId_matchId: { userId: user.id, matchId: nextMatch.id } },
+    });
+    if (pred) myNextPred = { homeScore: pred.homeScore, awayScore: pred.awayScore };
+  }
 
   // Fetch all predictions for the spotlight match
   const spotlightPredictions: Record<string, { homeScore: number; awayScore: number }> = {};
@@ -49,45 +66,113 @@ export default async function LeaderboardPage() {
 
   const isLive = !!inPlayMatch;
 
+  // Time until next match
+  let timeUntil = "";
+  if (nextMatch) {
+    const diffMs = new Date(nextMatch.matchDate).getTime() - now.getTime();
+    const diffH = Math.floor(diffMs / 1000 / 60 / 60);
+    const diffM = Math.floor((diffMs / 1000 / 60) % 60);
+    if (diffH >= 24) {
+      const days = Math.floor(diffH / 24);
+      timeUntil = `En ${days} día${days > 1 ? "s" : ""}`;
+    } else if (diffH > 0) {
+      timeUntil = `En ${diffH}h ${diffM}m`;
+    } else {
+      timeUntil = `En ${diffM}m`;
+    }
+  }
+
   return (
     <div>
       <h1 className="text-2xl font-bold mb-6 text-cyan-700">Tabla de posiciones</h1>
 
-      {/* Spotlight match banner */}
-      {spotlightMatch && (
-        <div className="bg-white border border-gray-200 rounded-xl px-4 py-3 mb-5 flex flex-wrap items-center gap-x-4 gap-y-2">
-          {isLive ? (
-            <span className="flex items-center gap-1.5 text-xs font-semibold text-red-500 bg-red-50 px-2.5 py-1 rounded-full shrink-0">
-              <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse inline-block" />
-              En juego
-            </span>
-          ) : (
-            <span className="text-xs font-semibold text-gray-400 bg-gray-100 px-2.5 py-1 rounded-full shrink-0">
-              Último partido
-            </span>
-          )}
+      {/* Two-column widgets row */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
 
-          <div className="flex items-center gap-2 flex-1 min-w-0">
-            <span className={`${getFlagClass(spotlightMatch.homeTeam.code)} shadow-sm rounded-xs shrink-0`} />
-            <span className="font-semibold text-sm text-gray-800 truncate sm:inline hidden">{spotlightMatch.homeTeam.name}</span>
-            {spotlightMatch.isFinished ? (
-              <span className="text-sm font-extrabold text-gray-700 shrink-0">
-                {spotlightMatch.homeScore} – {spotlightMatch.awayScore}
+        {/* Spotlight match banner */}
+        {spotlightMatch && (
+          <div className="bg-white border border-gray-200 rounded-xl px-4 py-3 flex flex-col gap-3">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                {isLive ? "En juego" : "Último partido"}
               </span>
-            ) : (
-              <span className="text-xs text-gray-400 shrink-0">vs</span>
-            )}
-            <span className="font-semibold text-sm text-gray-800 truncate sm:inline hidden">{spotlightMatch.awayTeam.name}</span>
-            <span className={`${getFlagClass(spotlightMatch.awayTeam.code)} shadow-sm rounded-xs shrink-0`} />
-          </div>
+              {isLive && (
+                <span className="flex items-center gap-1.5 text-xs font-semibold text-red-500 bg-red-50 px-2.5 py-1 rounded-full">
+                  <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse inline-block" />
+                  Live
+                </span>
+              )}
+            </div>
 
-          <span className="text-xs text-gray-400 shrink-0">
-            {new Date(spotlightMatch.matchDate).toLocaleDateString("es", {
-              day: "numeric", month: "short", timeZone: "America/Guayaquil",
-            })}
-          </span>
-        </div>
-      )}
+            <div className="flex items-center gap-2 flex-1 min-w-0">
+              <span className={`${getFlagClass(spotlightMatch.homeTeam.code)} shadow-sm rounded-xs shrink-0`} />
+              <span className="font-semibold text-sm text-gray-800 truncate hidden sm:inline">{spotlightMatch.homeTeam.name}</span>
+              {spotlightMatch.isFinished ? (
+                <span className="text-sm font-extrabold text-gray-700 shrink-0">
+                  {spotlightMatch.homeScore} – {spotlightMatch.awayScore}
+                </span>
+              ) : (
+                <span className="text-xs text-gray-400 shrink-0">vs</span>
+              )}
+              <span className="font-semibold text-sm text-gray-800 truncate hidden sm:inline">{spotlightMatch.awayTeam.name}</span>
+              <span className={`${getFlagClass(spotlightMatch.awayTeam.code)} shadow-sm rounded-xs shrink-0`} />
+              <span className="text-xs text-gray-400 ml-auto shrink-0">
+                {new Date(spotlightMatch.matchDate).toLocaleDateString("es", {
+                  day: "numeric", month: "short", timeZone: "America/Guayaquil",
+                })}
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* Next upcoming match */}
+        {nextMatch && (
+          <div className="bg-white border border-gray-200 rounded-xl px-4 py-3 flex flex-col gap-3">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                Próximo partido
+              </span>
+              <span className="text-xs font-semibold text-cyan-600 bg-cyan-50 px-2.5 py-1 rounded-full shrink-0">
+                {timeUntil}
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2 flex-1 min-w-0">
+              <span className={`${getFlagClass(nextMatch.homeTeam.code)} shadow-sm rounded-xs shrink-0`} />
+              <span className="font-semibold text-sm text-gray-800 truncate hidden sm:inline">{nextMatch.homeTeam.name}</span>
+              <span className="text-xs text-gray-400 shrink-0">vs</span>
+              <span className="font-semibold text-sm text-gray-800 truncate hidden sm:inline">{nextMatch.awayTeam.name}</span>
+              <span className={`${getFlagClass(nextMatch.awayTeam.code)} shadow-sm rounded-xs shrink-0`} />
+              <span className="text-xs text-gray-400 ml-auto shrink-0">
+                {new Date(nextMatch.matchDate).toLocaleDateString("es", {
+                  day: "numeric", month: "short", timeZone: "America/Guayaquil",
+                })}
+                {" · "}
+                {new Date(nextMatch.matchDate).toLocaleTimeString("es", {
+                  hour: "2-digit", minute: "2-digit", timeZone: "America/Guayaquil",
+                })}
+              </span>
+            </div>
+
+            {/* My prediction / CTA */}
+            <div className="pt-2 border-t border-gray-100 flex items-center justify-between">
+              <span className="text-xs text-gray-500">Mi pronóstico</span>
+              {myNextPred ? (
+                <span className="text-xs font-bold px-2.5 py-1 rounded-lg bg-cyan-50 text-cyan-700 border border-cyan-100">
+                  {myNextPred.homeScore} – {myNextPred.awayScore}
+                </span>
+              ) : (
+                <Link
+                  href="/dashboard/matches"
+                  className="text-xs font-semibold text-amber-600 bg-amber-50 px-2.5 py-1 rounded-full hover:bg-amber-100 transition-colors"
+                >
+                  Pronosticar →
+                </Link>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Table */}
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">

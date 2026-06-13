@@ -8,6 +8,8 @@ export default async function DashboardPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
+  const now = new Date();
+
   const [dbUser, totalMatches, leaderboard] = await Promise.all([
     prisma.user.findUnique({
       where: { id: user!.id },
@@ -32,12 +34,60 @@ export default async function DashboardPage() {
     .sort((a, b) => b.points - a.points);
   const position = ranked.findIndex((u) => u.id === user!.id) + 1;
 
+  // Spotlight match: in-play or most recently finished
+  const inPlayMatch = await prisma.match.findFirst({
+    where: { matchDate: { lte: now }, isFinished: false },
+    include: { homeTeam: true, awayTeam: true },
+    orderBy: { matchDate: "desc" },
+  });
+
+  const spotlightMatch = inPlayMatch ?? await prisma.match.findFirst({
+    where: { isFinished: true },
+    include: { homeTeam: true, awayTeam: true },
+    orderBy: { matchDate: "desc" },
+  });
+
+  // My prediction for the spotlight match
+  let mySpotlightPred: { homeScore: number; awayScore: number } | null = null;
+  if (spotlightMatch) {
+    const pred = await prisma.prediction.findUnique({
+      where: { userId_matchId: { userId: user!.id, matchId: spotlightMatch.id } },
+    });
+    if (pred) mySpotlightPred = { homeScore: pred.homeScore, awayScore: pred.awayScore };
+  }
+
+  const isLive = !!inPlayMatch;
+
+  // Score the prediction
+  let predResult: "exact" | "winner" | "wrong" | null = null;
+  if (
+    mySpotlightPred &&
+    spotlightMatch?.isFinished &&
+    spotlightMatch.homeScore != null &&
+    spotlightMatch.awayScore != null
+  ) {
+    const rH = spotlightMatch.homeScore;
+    const rA = spotlightMatch.awayScore;
+    const realWinner = rH > rA ? "home" : rA > rH ? "away" : "draw";
+    const predWinner =
+      mySpotlightPred.homeScore > mySpotlightPred.awayScore
+        ? "home"
+        : mySpotlightPred.awayScore > mySpotlightPred.homeScore
+        ? "away"
+        : "draw";
+
+    if (mySpotlightPred.homeScore === rH && mySpotlightPred.awayScore === rA)
+      predResult = "exact";
+    else if (predWinner === realWinner) predResult = "winner";
+    else predResult = "wrong";
+  }
+
   // Próximos partidos sin pronóstico
   const predictedMatchIds = new Set(dbUser?.predictions.map((p) => p.matchId));
   const upcomingMatches = await prisma.match.findMany({
     where: {
       isFinished: false,
-      matchDate: { gte: new Date() },
+      matchDate: { gte: now },
       id: { notIn: [...predictedMatchIds] },
     },
     include: { homeTeam: true, awayTeam: true },
@@ -45,11 +95,11 @@ export default async function DashboardPage() {
     take: 3,
   });
 
-  // Próximos 4 partidos (todos, independiente de pronóstico o fase)
+  // Próximos 4 partidos (todos)
   const next4Matches = await prisma.match.findMany({
     where: {
       isFinished: false,
-      matchDate: { gte: new Date() },
+      matchDate: { gte: now },
     },
     include: { homeTeam: true, awayTeam: true },
     orderBy: { matchDate: "asc" },
@@ -89,6 +139,91 @@ export default async function DashboardPage() {
           <p className="text-3xl font-bold mt-1 text-cyan-700">{totalMatches - totalPredictions}</p>
         </div>
       </div>
+
+      {/* Spotlight match */}
+      {spotlightMatch && (
+        <div className="bg-white border border-gray-200 rounded-xl p-5 mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-semibold text-cyan-700">
+              {isLive ? "Partido en juego" : "Último partido"}
+            </h2>
+            <Link
+              href="/dashboard/leaderboard"
+              className="text-sm text-cyan-700 hover:underline flex items-center gap-1"
+            >
+              Ver posiciones
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-4">
+                <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+              </svg>
+            </Link>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
+            {/* Live / finished badge */}
+            {isLive ? (
+              <span className="flex items-center gap-1.5 text-xs font-semibold text-red-500 bg-red-50 px-2.5 py-1 rounded-full shrink-0">
+                <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse inline-block" />
+                En juego
+              </span>
+            ) : (
+              <span className="text-xs font-semibold text-gray-400 bg-gray-100 px-2.5 py-1 rounded-full shrink-0">
+                Finalizado
+              </span>
+            )}
+
+            {/* Teams + score */}
+            <div className="flex items-center gap-2 flex-1 min-w-0">
+              <span className={`${getFlagClass(spotlightMatch.homeTeam.code)} shadow-sm rounded-xs shrink-0`} />
+              <span className="font-semibold text-sm text-gray-800 hidden sm:inline truncate">
+                {spotlightMatch.homeTeam.name}
+              </span>
+              {spotlightMatch.isFinished ? (
+                <span className="text-sm font-extrabold text-gray-700 shrink-0">
+                  {spotlightMatch.homeScore} – {spotlightMatch.awayScore}
+                </span>
+              ) : (
+                <span className="text-xs text-gray-400 shrink-0">vs</span>
+              )}
+              <span className="font-semibold text-sm text-gray-800 hidden sm:inline truncate">
+                {spotlightMatch.awayTeam.name}
+              </span>
+              <span className={`${getFlagClass(spotlightMatch.awayTeam.code)} shadow-sm rounded-xs shrink-0`} />
+            </div>
+
+            {/* Date */}
+            <span className="text-xs text-gray-400 shrink-0">
+              {new Date(spotlightMatch.matchDate).toLocaleDateString("es", {
+                day: "numeric", month: "short", timeZone: "America/Guayaquil",
+              })}
+            </span>
+          </div>
+
+          {/* My prediction for this match */}
+          <div className="mt-4 pt-4 border-t border-gray-100 flex items-center justify-between">
+            <span className="text-xs text-gray-500 font-medium">Mi pronóstico</span>
+            {mySpotlightPred ? (
+              <span
+                className={`inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-lg ${
+                  predResult === "exact"
+                    ? "bg-emerald-100 text-emerald-700"
+                    : predResult === "winner"
+                    ? "bg-cyan-50 text-cyan-700 border border-cyan-100"
+                    : predResult === "wrong"
+                    ? "bg-red-50 text-red-500"
+                    : "bg-gray-100 text-gray-600"
+                }`}
+              >
+                {mySpotlightPred.homeScore} – {mySpotlightPred.awayScore}
+                {predResult === "exact" && <span className="ml-1">✓✓</span>}
+                {predResult === "winner" && <span className="ml-1">✓</span>}
+                {predResult === "wrong" && <span className="ml-1">✗</span>}
+              </span>
+            ) : (
+              <span className="text-xs text-gray-300 italic">Sin pronóstico</span>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Próximos 4 partidos */}
       {next4Matches.length > 0 && (
