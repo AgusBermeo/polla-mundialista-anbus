@@ -109,10 +109,33 @@ export default async function DashboardPage() {
   return (
     <div>
       <h1 className="text-2xl font-bold text-cyan-700">
-        Bienvenido, {dbUser?.name || dbUser?.email} 👋
+        {/* Random greetings depending of the time of the day */}
+        {(() => {
+          const hour = now.getHours();
+          let timeOfDayGreeting;
+          let greetings = [
+            "Hola",
+            "Saludos",
+            "Hey",
+            "Bienvenido",
+            "Qué más",
+            "Buenas",
+            "Qué tal",
+            "Cómo vas",
+          ]
+          if (hour < 12) {
+            timeOfDayGreeting = greetings.push("Buenos días");
+          } else if (hour < 18) {
+            timeOfDayGreeting = greetings.push("Buenas tardes");
+          } else {
+            timeOfDayGreeting = greetings.push("Buenas noches");
+          }
+          const greeting = greetings[Math.floor(Math.random() * greetings.length)];
+          return `${greeting}, ${dbUser?.name || dbUser?.email} 👋`;
+        })()}
       </h1>
       <p className="text-gray-500 mt-1 mb-8">
-        Haz tus pronósticos antes de que empiece cada partido.
+        Puedes hacer tus pronósticos antes de que empiece cada partido.
       </p>
 
       {/* Stats */}
