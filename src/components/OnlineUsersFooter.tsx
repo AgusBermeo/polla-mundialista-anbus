@@ -20,7 +20,6 @@ export default function OnlineUsersFooter({
   currentUserName,
   isAdmin,
 }: OnlineUsersFooterProps) {
-  if (!isAdmin) return null;
   const [onlineUsers, setOnlineUsers] = useState<OnlineUser[]>([]);
 
   useEffect(() => {
@@ -44,8 +43,8 @@ export default function OnlineUsersFooter({
         const users: OnlineUser[] = Object.entries(state).map(
           ([userId, presences]) => ({
             userId,
-            name: presences[0].name,
-            joinedAt: presences[0].joinedAt,
+            name: presences[0]?.name || "Usuario",
+            joinedAt: presences[0]?.joinedAt || Date.now(),
           })
         );
 
@@ -63,9 +62,11 @@ export default function OnlineUsersFooter({
       });
 
     return () => {
-      channel.untrack().then(() => supabase.removeChannel(channel));
+      supabase.removeChannel(channel);
     };
   }, [currentUserId, currentUserName]);
+
+  if (!isAdmin) return null;
 
   const count = onlineUsers.length;
 
