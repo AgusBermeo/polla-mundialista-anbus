@@ -10,7 +10,7 @@ export default async function DashboardPage() {
 
   const now = new Date();
 
-  const [dbUser, totalMatches, leaderboard] = await Promise.all([
+  const [dbUser, totalMatches, leaderboard, finishedMatches] = await Promise.all([
     prisma.user.findUnique({
       where: { id: user!.id },
       include: { predictions: true },
@@ -19,6 +19,10 @@ export default async function DashboardPage() {
     prisma.user.findMany({
       include: { predictions: true },
       orderBy: { createdAt: "asc" },
+    }),
+    prisma.match.findMany({
+      where: { isFinished: true },
+      orderBy: { matchDate: "desc" },
     }),
   ]);
 
@@ -31,8 +35,30 @@ export default async function DashboardPage() {
       id: u.id,
       points: u.predictions.reduce((sum, p) => sum + p.points, 0),
     }))
-    .sort((a, b) => b.points - a.points);
+    .sort((a, b) => {
+      if (b.points !== a.points) return b.points - a.points;
+      return a.id.localeCompare(b.id);
+    });
   const position = ranked.findIndex((u) => u.id === user!.id) + 1;
+
+  // Compute previous position to find rank change
+  let rankChange = 0;
+  if (finishedMatches.length > 0) {
+    const lastMatchId = finishedMatches[0].id;
+    const previousLeaderboard = leaderboard
+      .map((u) => ({
+        id: u.id,
+        points: u.predictions
+          .filter((p) => p.matchId !== lastMatchId)
+          .reduce((sum, p) => sum + p.points, 0),
+      }))
+      .sort((a, b) => {
+        if (b.points !== a.points) return b.points - a.points;
+        return a.id.localeCompare(b.id);
+      });
+    const previousPosition = previousLeaderboard.findIndex((u) => u.id === user!.id) + 1;
+    rankChange = previousPosition - position; // Going up is positive
+  }
 
   // Spotlight match: in-play or most recently finished
   const inPlayMatch = await prisma.match.findFirst({
@@ -73,8 +99,8 @@ export default async function DashboardPage() {
       mySpotlightPred.homeScore > mySpotlightPred.awayScore
         ? "home"
         : mySpotlightPred.awayScore > mySpotlightPred.homeScore
-        ? "away"
-        : "draw";
+          ? "away"
+          : "draw";
 
     if (mySpotlightPred.homeScore === rH && mySpotlightPred.awayScore === rA)
       predResult = "exact";
@@ -144,11 +170,28 @@ export default async function DashboardPage() {
           <p className="text-sm text-gray-500">Tus puntos</p>
           <p className="text-3xl font-bold mt-1 text-cyan-700">{totalPoints}</p>
         </div>
-        <div className="bg-white rounded-xl border border-gray-200 p-5">
-          <p className="text-sm text-gray-500">Posición</p>
-          <p className="text-3xl font-bold mt-1 text-cyan-700">
-            {position === 0 ? "-" : `#${position}`}
-          </p>
+        <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-xs">
+          <p className="text-sm text-gray-500 font-medium">Posición</p>
+          <div className="flex items-baseline gap-2 mt-1">
+            <p className="text-3xl font-extrabold text-cyan-700">
+              {position > 0 ? `#${position}` : "—"}
+            </p>
+            {rankChange > 0 && (
+              <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-100 flex items-center gap-0.5">
+                ▲ +{rankChange}
+              </span>
+            )}
+            {rankChange < 0 && (
+              <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-rose-50 text-rose-600 border border-rose-100 flex items-center gap-0.5">
+                ▼ {rankChange}
+              </span>
+            )}
+            {rankChange === 0 && position > 0 && (
+              <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-gray-50 text-gray-500 border border-gray-100 flex items-center gap-0.5">
+                • 0
+              </span>
+            )}
+          </div>
         </div>
         <div className="bg-white rounded-xl border border-gray-200 p-5">
           <p className="text-sm text-gray-500">Pronósticos</p>
@@ -226,15 +269,14 @@ export default async function DashboardPage() {
             <span className="text-xs text-gray-500 font-medium">Mi pronóstico</span>
             {mySpotlightPred ? (
               <span
-                className={`inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-lg ${
-                  predResult === "exact"
+                className={`inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-lg ${predResult === "exact"
                     ? "bg-emerald-100 text-emerald-700"
                     : predResult === "winner"
-                    ? "bg-cyan-50 text-cyan-700 border border-cyan-100"
-                    : predResult === "wrong"
-                    ? "bg-red-50 text-red-500"
-                    : "bg-gray-100 text-gray-600"
-                }`}
+                      ? "bg-cyan-50 text-cyan-700 border border-cyan-100"
+                      : predResult === "wrong"
+                        ? "bg-red-50 text-red-500"
+                        : "bg-gray-100 text-gray-600"
+                  }`}
               >
                 {mySpotlightPred.homeScore} – {mySpotlightPred.awayScore}
                 {predResult === "exact" && <span className="ml-1">✓✓</span>}
