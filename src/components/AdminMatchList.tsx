@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { getFlagClass } from "@/lib/teamFlags";
 
 type Team = { id: string; name: string; code: string; group: string };
@@ -12,43 +12,101 @@ type Match = {
   awayScore: number | null;
   homeTeam: Team;
   awayTeam: Team;
+  stage: string;
 };
 
-export default function AdminMatchList({ matches }: { matches: Match[] }) {
-  const [activeGroup, setActiveGroup] = useState("A");
-  const groups = [...new Set(matches.map((m) => m.homeTeam.group))].sort();
+const STAGE_LABELS: Record<string, string> = {
+  GROUP:         "Fase de grupos",
+  ROUND_OF_32:   "Ronda de 32",
+  ROUND_OF_16:   "Octavos de final",
+  QUARTER_FINAL: "Cuartos de final",
+  SEMI_FINAL:    "Semifinales",
+  THIRD_PLACE:   "Tercer puesto",
+  FINAL:         "Final",
+};
 
-  const matchesByGroup = matches.reduce((acc, match) => {
-    const group = match.homeTeam.group;
-    if (!acc[group]) acc[group] = [];
-    acc[group].push(match);
-    return acc;
-  }, {} as Record<string, Match[]>);
+function getTodayLabel() {
+  return new Date().toLocaleDateString("es", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    timeZone: "America/Guayaquil",
+  });
+}
+
+export default function AdminMatchList({ matches }: { matches: Match[] }) {
+  const todayLabel = getTodayLabel();
+  const todayRef = useRef<HTMLElement | null>(null);
+
+  // Sort all matches chronologically
+  const sorted = [...matches].sort(
+    (a, b) => new Date(a.matchDate).getTime() - new Date(b.matchDate).getTime()
+  );
+
+  // Group by day label
+  const byDate: { label: string; matches: Match[] }[] = [];
+  for (const match of sorted) {
+    const label = new Date(match.matchDate).toLocaleDateString("es", {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+      timeZone: "America/Guayaquil",
+    });
+    const last = byDate[byDate.length - 1];
+    if (last && last.label === label) {
+      last.matches.push(match);
+    } else {
+      byDate.push({ label, matches: [match] });
+    }
+  }
+
+  // Find the index of today's section, or the next upcoming day
+  const todayIndex = byDate.findIndex((d) => d.label === todayLabel);
+  // If today has no matches, find the first future day
+  const upcomingIndex = byDate.findIndex((d) =>
+    d.matches.some((m) => new Date(m.matchDate) >= new Date())
+  );
+  const scrollTargetIndex = todayIndex !== -1 ? todayIndex : upcomingIndex;
+
+  useEffect(() => {
+    if (todayRef.current) {
+      // Small delay so the page has fully painted before we jump
+      const id = setTimeout(() => {
+        todayRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 120);
+      return () => clearTimeout(id);
+    }
+  }, []);
 
   return (
-    <div>
-      {/* Group tabs - horizontally scrollable, matching MatchList style */}
-      <div className="flex gap-2 mb-6 overflow-x-auto pb-2 -mx-6 px-6 scrollbar-none">
-        {groups.map((group) => (
-          <button
-            key={group}
-            onClick={() => setActiveGroup(group)}
-            className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors cursor-pointer shrink-0 ${
-              activeGroup === group
-                ? "bg-cyan-700 text-white shadow-xs"
-                : "bg-white border border-gray-200 text-gray-600 hover:bg-gray-50"
-            }`}
+    <div className="space-y-8">
+      {byDate.map(({ label, matches: dayMatches }, i) => {
+        const isToday = i === scrollTargetIndex;
+        return (
+          <section
+            key={label}
+            ref={isToday ? todayRef : undefined}
           >
-            Grupo {group}
-          </button>
-        ))}
-      </div>
-
-      <div className="space-y-3">
-        {matchesByGroup[activeGroup]?.map((match) => (
-          <AdminMatchCard key={match.id} match={match} />
-        ))}
-      </div>
+            <div className="flex items-center gap-2 mb-3">
+              <h2 className={`text-xs font-bold uppercase tracking-widest capitalize ${
+                isToday ? "text-cyan-700" : "text-gray-400"
+              }`}>
+                {label}
+              </h2>
+              {isToday && (
+                <span className="text-[10px] font-bold text-white bg-cyan-600 px-2 py-0.5 rounded-full uppercase tracking-wide">
+                  Hoy
+                </span>
+              )}
+            </div>
+            <div className="space-y-3">
+              {dayMatches.map((match) => (
+                <AdminMatchCard key={match.id} match={match} />
+              ))}
+            </div>
+          </section>
+        );
+      })}
     </div>
   );
 }
@@ -83,6 +141,11 @@ function AdminMatchCard({ match }: { match: Match }) {
 
     setSaving(false);
   }
+
+  const stageLabel =
+    match.stage === "GROUP"
+      ? `Grupo ${match.homeTeam.group}`
+      : (STAGE_LABELS[match.stage] ?? match.stage);
 
   const renderStatus = () => {
     if (saved && !saving) {
@@ -120,17 +183,18 @@ function AdminMatchCard({ match }: { match: Match }) {
     <div className={`bg-white rounded-xl border p-4 transition-all duration-200 hover:shadow-xs ${
       saved ? "border-emerald-200 bg-emerald-50/10" : "border-gray-200"
     }`}>
-      {/* Responsive layout: stacked on mobile, single row on desktop */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 md:gap-4">
 
-        {/* Date / Time + mobile status */}
-        <div className="flex justify-between md:justify-start items-center md:w-28 md:shrink-0 text-xs text-gray-400 font-medium">
-          <div>
-            {matchDate.toLocaleDateString("es", { day: "numeric", month: "short", timeZone: "America/Guayaquil" })}
-            <span className="mx-1.5">•</span>
-            {matchDate.toLocaleTimeString("es", { hour: "2-digit", minute: "2-digit", timeZone: "America/Guayaquil" })}
+        {/* Time + stage badge + mobile status */}
+        <div className="flex justify-between md:justify-start items-center md:w-36 md:shrink-0 gap-2">
+          <div className="flex flex-col gap-0.5">
+            <span className="text-xs text-gray-400 font-medium">
+              {matchDate.toLocaleTimeString("es", { hour: "2-digit", minute: "2-digit", timeZone: "America/Guayaquil" })}
+            </span>
+            <span className="text-[10px] font-semibold text-cyan-700 bg-cyan-50 px-1.5 py-0.5 rounded w-fit">
+              {stageLabel}
+            </span>
           </div>
-          {/* Status pill on mobile (top-right) */}
           <div className="md:hidden">{renderStatus()}</div>
         </div>
 
