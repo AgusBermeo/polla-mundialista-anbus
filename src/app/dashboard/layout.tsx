@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import OnlineUsersFooter from "@/components/OnlineUsersFooter";
+import DashboardFooter from "@/components/DashboardFooter";
 import Chat from "@/components/Chat";
 
 export default async function DashboardLayout({
@@ -22,6 +23,7 @@ export default async function DashboardLayout({
       <main className="flex-1 max-w-5xl w-full mx-auto px-6 py-8">
         {children}
       </main>
+      <DashboardFooter />
       <OnlineUsersFooter
         currentUserId={user.id}
         currentUserName={dbUser?.name ?? user.email ?? "Usuario"}
