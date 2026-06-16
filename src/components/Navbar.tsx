@@ -73,7 +73,6 @@ export default function Navbar({ userName, isAdmin }: NavbarProps) {
     });
   }
 
-  // Helper function to check if item is active
   const isLinkActive = (href: string) => {
     if (href === "/dashboard") {
       return pathname === href;
@@ -85,7 +84,7 @@ export default function Navbar({ userName, isAdmin }: NavbarProps) {
     <nav className="bg-slate-100 border-b border-gray-200 shadow-2xs relative z-50">
       {/* Primary Top Bar */}
       <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
-        
+
         {/* Left Section: Logo and Desktop Menu */}
         <div className="flex items-center gap-8">
           {/* Logo */}
@@ -141,12 +140,10 @@ export default function Navbar({ userName, isAdmin }: NavbarProps) {
             aria-label="Toggle Menu"
           >
             {isOpen ? (
-              // Close Icon
               <svg className="w-6 h-6 animate-scale-in" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
               </svg>
             ) : (
-              // Hamburger Icon
               <svg className="w-6 h-6 animate-scale-in" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
               </svg>
@@ -188,15 +185,26 @@ export default function Navbar({ userName, isAdmin }: NavbarProps) {
             })}
           </div>
 
-          {/* User Profile and Logout for Mobile */}
-          <div className="border-t border-gray-200 pt-4 pb-2 px-4 flex items-center justify-between">
-            <div className="flex flex-col">
-              <span className="text-xs text-gray-400 font-semibold uppercase tracking-wider">Usuario</span>
-              <span className="text-sm text-cyan-700 font-bold">{userName}</span>
+          {/* User Profile, Coffee Button, and Logout for Mobile */}
+          <div className="border-t border-gray-200 pt-4 pb-2 px-4 flex flex-col gap-3">
+            <div className="flex items-center justify-between">
+              <div className="flex flex-col">
+                <span className="text-xs text-gray-400 font-semibold uppercase tracking-wider">Usuario</span>
+                <span className="text-sm text-cyan-700 font-bold">{userName}</span>
+              </div>
+              <div className="bg-red-50 hover:bg-red-100 transition-colors px-4 py-2 rounded-xl">
+                <LogoutButton />
+              </div>
             </div>
-            <div className="bg-red-50 hover:bg-red-100 transition-colors px-4 py-2 rounded-xl">
-              <LogoutButton />
-            </div>
+            {/* Buy me a coffee — mobile only */}
+            <a
+              href="/coffee"
+              onClick={() => setIsOpen(false)}
+              className="flex items-center justify-center gap-2 text-sm font-medium text-amber-600 bg-amber-50 border border-amber-200 hover:bg-amber-100 px-4 py-2.5 rounded-xl transition-colors duration-200"
+            >
+              <span>☕</span>
+              <span>Invítame un café</span>
+            </a>
           </div>
         </div>
       </div>
