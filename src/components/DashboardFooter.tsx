@@ -9,8 +9,8 @@ export default function DashboardFooter() {
           href="/coffee"
           className="flex items-center gap-1.5 text-sm font-medium text-amber-600 bg-amber-50 border border-amber-200 hover:bg-amber-100 hover:border-amber-300 px-3 py-1.5 rounded-full transition-colors duration-200"
         >
-          <span>☕</span>
-          <span>Buy me a coffee</span>
+          <span>🍺</span>
+          <span>Buy me a beer</span>
         </a>
       </div>
     </footer>
