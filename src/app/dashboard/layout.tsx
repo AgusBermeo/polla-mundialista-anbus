@@ -5,6 +5,7 @@ import Navbar from "@/components/Navbar";
 import OnlineUsersFooter from "@/components/OnlineUsersFooter";
 import DashboardFooter from "@/components/DashboardFooter";
 import Chat from "@/components/Chat";
+import BackToTop from "@/components/BackToTop";
 
 export default async function DashboardLayout({
   children,
@@ -29,6 +30,7 @@ export default async function DashboardLayout({
         currentUserName={dbUser?.name ?? user.email ?? "Usuario"}
         isAdmin={!!dbUser?.isAdmin}
       />
+      <BackToTop />
       <Chat
         currentUserId={user.id}
         currentUserName={dbUser?.name ?? user.email ?? "Usuario"}

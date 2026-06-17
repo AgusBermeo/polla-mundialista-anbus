@@ -1,8 +1,7 @@
 "use client";
 
 import { getFlagClass } from "@/lib/teamFlags";
-
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import GroupTable, { MatchForTable, computeStandings, compareThird } from "@/components/GroupTable";
 
 type Team = { id: string; name: string; code: string; group: string };
@@ -39,6 +38,15 @@ const STAGE_ORDER = [
   "THIRD_PLACE",
   "FINAL",
 ];
+
+function getTodayLabel() {
+  return new Date().toLocaleDateString("es", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    timeZone: "America/Guayaquil",
+  });
+}
 
 function getBestThirds(allGroupMatches: Record<string, MatchForTable[]>): Set<string> {
   const thirds = Object.entries(allGroupMatches).flatMap(([, matches]) => {
@@ -79,6 +87,107 @@ function ScoringInfoBox() {
   );
 }
 
+// ── Today view ────────────────────────────────────────────────────────────────
+
+function TodayView({
+  matchesByGroup,
+  knockoutMatches,
+  predictionsMap,
+  sessionPredictions,
+  onPredictionSaved,
+}: {
+  matchesByGroup: Record<string, Match[]>;
+  knockoutMatches: Match[];
+  predictionsMap: Record<string, Prediction>;
+  sessionPredictions: Record<string, { homeScore: number; awayScore: number }>;
+  onPredictionSaved: (matchId: string, homeScore: number, awayScore: number) => void;
+}) {
+  const todayLabel = getTodayLabel();
+  const todayRef = useRef<HTMLDivElement | null>(null);
+
+  const allMatches = [
+    ...Object.values(matchesByGroup).flat(),
+    ...knockoutMatches,
+  ].sort((a, b) => new Date(a.matchDate).getTime() - new Date(b.matchDate).getTime());
+
+  // Group into day buckets
+  const byDate: { label: string; matches: Match[] }[] = [];
+  for (const match of allMatches) {
+    const label = new Date(match.matchDate).toLocaleDateString("es", {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+      timeZone: "America/Guayaquil",
+    });
+    const last = byDate[byDate.length - 1];
+    if (last && last.label === label) {
+      last.matches.push(match);
+    } else {
+      byDate.push({ label, matches: [match] });
+    }
+  }
+
+  // Target: today's section, or the next upcoming day
+  const todayIndex = byDate.findIndex((d) => d.label === todayLabel);
+  const upcomingIndex = byDate.findIndex((d) =>
+    d.matches.some((m) => new Date(m.matchDate) >= new Date())
+  );
+  const scrollTargetIndex = todayIndex !== -1 ? todayIndex : upcomingIndex;
+
+  useEffect(() => {
+    if (todayRef.current) {
+      const id = setTimeout(() => {
+        todayRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 120);
+      return () => clearTimeout(id);
+    }
+  }, []);
+
+  if (byDate.length === 0) {
+    return (
+      <div className="bg-white rounded-xl border border-gray-200 p-10 text-center">
+        <p className="text-gray-400 text-sm">No hay partidos disponibles.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-8">
+      {byDate.map(({ label, matches: dayMatches }, i) => {
+        const isTarget = i === scrollTargetIndex;
+        return (
+          <section key={label} ref={isTarget ? todayRef : undefined}>
+            <div className="flex items-center gap-2 mb-3">
+              <h2 className={`text-xs font-bold uppercase tracking-widest capitalize ${
+                isTarget ? "text-cyan-700" : "text-gray-400"
+              }`}>
+                {label}
+              </h2>
+              {isTarget && (
+                <span className="text-[10px] font-bold text-white bg-cyan-600 px-2 py-0.5 rounded-full uppercase tracking-wide">
+                  Hoy
+                </span>
+              )}
+            </div>
+            <div className="space-y-3">
+              {dayMatches.map((match) => (
+                <MatchCard
+                  key={match.id}
+                  match={match}
+                  prediction={sessionPredictions[match.id] ?? predictionsMap[match.id]}
+                  onSaved={(hs, as_) => onPredictionSaved(match.id, hs, as_)}
+                />
+              ))}
+            </div>
+          </section>
+        );
+      })}
+    </div>
+  );
+}
+
+// ── Main export ───────────────────────────────────────────────────────────────
+
 export default function MatchList({
   matchesByGroup,
   knockoutMatches = [],
@@ -88,7 +197,7 @@ export default function MatchList({
   knockoutMatches?: Match[];
   predictionsMap: Record<string, Prediction>;
 }) {
-  const [stage, setStage] = useState<"groups" | "knockout">("groups");
+  const [stage, setStage] = useState<"today" | "groups" | "knockout">("today");
   const [activeGroup, setActiveGroup] = useState("A");
   const groups = Object.keys(matchesByGroup).sort();
 
@@ -154,6 +263,16 @@ export default function MatchList({
         <h1 className="text-2xl font-bold text-cyan-700 mb-3 md:mb-0">Pronósticos</h1>
         <div className="flex items-center bg-white border border-gray-200 rounded-full p-1 shadow-sm">
           <button
+            onClick={() => setStage("today")}
+            className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all cursor-pointer ${
+              stage === "today"
+                ? "bg-cyan-600 text-white shadow-sm"
+                : "text-gray-500 hover:text-gray-700"
+            }`}
+          >
+            Hoy
+          </button>
+          <button
             onClick={() => setStage("groups")}
             className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all cursor-pointer ${
               stage === "groups"
@@ -161,7 +280,7 @@ export default function MatchList({
                 : "text-gray-500 hover:text-gray-700"
             }`}
           >
-            Fase de Grupos
+            Grupos
           </button>
           <button
             onClick={() => setStage("knockout")}
@@ -171,13 +290,24 @@ export default function MatchList({
                 : "text-gray-500 hover:text-gray-700"
             }`}
           >
-            Fase Eliminatoria
+            Eliminatoria
           </button>
         </div>
       </div>
 
       {/* Scoring info box */}
       <ScoringInfoBox />
+
+      {/* ── TODAY ── */}
+      {stage === "today" && (
+        <TodayView
+          matchesByGroup={matchesByGroup}
+          knockoutMatches={knockoutMatches}
+          predictionsMap={predictionsMap}
+          sessionPredictions={sessionPredictions}
+          onPredictionSaved={onPredictionSaved}
+        />
+      )}
 
       {/* ── GROUPS ── */}
       {stage === "groups" && (
