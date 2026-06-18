@@ -2,7 +2,7 @@
 
 import { getFlagClass } from "@/lib/teamFlags";
 import { useState, useEffect, useRef } from "react";
-import GroupTable, { MatchForTable, computeStandings, compareThird } from "@/components/GroupTable";
+import GroupTable, { MatchForTable, computeStandings, compareThird, Standing } from "@/components/GroupTable";
 
 type Team = { id: string; name: string; code: string; group: string };
 type Match = {
@@ -60,6 +60,96 @@ function getBestThirds(allGroupMatches: Record<string, MatchForTable[]>): Set<st
   return new Set(thirds.slice(0, 8).map((s) => s.teamId));
 }
 
+function getThirdTeamId(matchesForTable: MatchForTable[]): string | null {
+  const standings = computeStandings(matchesForTable);
+  return standings[2]?.teamId ?? null;
+}
+
+// ── Knockout team name resolution ─────────────────────────────────────────────
+
+/**
+ * Build a map from placeholder team code → resolved team name based on
+ * actual group standings and best-third logic.
+ *
+ * Placeholder codes follow these patterns:
+ *   - "A1", "B2"  → 1st/2nd place of group A/B
+ *   - "3rd-ABCDF" → best 3rd place team from groups A,B,C,D,F
+ */
+function buildResolvedTeamNames(
+  matchesByGroup: Record<string, Match[]>
+): Record<string, string> {
+  const resolved: Record<string, string> = {};
+
+  // Compute standings per group
+  const standingsByGroup: Record<string, Standing[]> = {};
+  for (const [group, matches] of Object.entries(matchesByGroup)) {
+    const forTable: MatchForTable[] = matches.map((m) => ({
+      id: m.id,
+      homeTeam: m.homeTeam,
+      awayTeam: m.awayTeam,
+      homeScore: m.homeScore,
+      awayScore: m.awayScore,
+      counted: m.isFinished,
+    }));
+    standingsByGroup[group] = computeStandings(forTable);
+  }
+
+  // 1st and 2nd place per group
+  for (const [group, standings] of Object.entries(standingsByGroup)) {
+    if (standings[0] && standings[0].played > 0) {
+      resolved[`${group}1`] = standings[0].teamName;
+    }
+    if (standings[1] && standings[1].played > 0) {
+      resolved[`${group}2`] = standings[1].teamName;
+    }
+  }
+
+  // Best 3rd place teams — compute across all groups
+  const allThirds: Array<Standing & { group: string }> = [];
+  for (const [group, standings] of Object.entries(standingsByGroup)) {
+    const third = standings[2];
+    if (third && third.played > 0) {
+      allThirds.push({ ...third, group });
+    }
+  }
+  allThirds.sort(compareThird);
+
+  // For each "3rd-XXXXX" placeholder, find the best 3rd-place team
+  // whose group letter is in the set
+  const thirdPlaceholders = [
+    "3rd-ABCDF",
+    "3rd-CDFGH",
+    "3rd-CEFHI",
+    "3rd-EHIJK",
+    "3rd-BEFIJ",
+    "3rd-AEHIJ",
+    "3rd-EFGIJ",
+    "3rd-DEIJL",
+  ];
+
+  // Track which 3rd-place teams have already been assigned to a slot
+  const assignedThirds = new Set<string>();
+
+  // Sort placeholders by their position in the r32 draw (stable order)
+  // We process them in the order defined above which matches match order
+  for (const placeholder of thirdPlaceholders) {
+    // Extract the group letters from the code e.g. "3rd-ABCDF" → ["A","B","C","D","F"]
+    const groups = placeholder.replace("3rd-", "").split("");
+
+    // Find the best unassigned 3rd-place team from those groups
+    const best = allThirds.find(
+      (t) => groups.includes(t.group) && !assignedThirds.has(t.teamId)
+    );
+
+    if (best) {
+      resolved[placeholder] = best.teamName;
+      assignedThirds.add(best.teamId);
+    }
+  }
+
+  return resolved;
+}
+
 function ScoringInfoBox() {
   return (
     <div className="flex items-center gap-3 bg-cyan-50 border border-cyan-100 rounded-xl px-4 py-3.5 mb-6">
@@ -95,12 +185,14 @@ function TodayView({
   predictionsMap,
   sessionPredictions,
   onPredictionSaved,
+  resolvedTeamNames,
 }: {
   matchesByGroup: Record<string, Match[]>;
   knockoutMatches: Match[];
   predictionsMap: Record<string, Prediction>;
   sessionPredictions: Record<string, { homeScore: number; awayScore: number }>;
   onPredictionSaved: (matchId: string, homeScore: number, awayScore: number) => void;
+  resolvedTeamNames: Record<string, string>;
 }) {
   const todayLabel = getTodayLabel();
   const todayRef = useRef<HTMLDivElement | null>(null);
@@ -176,6 +268,8 @@ function TodayView({
                   match={match}
                   prediction={sessionPredictions[match.id] ?? predictionsMap[match.id]}
                   onSaved={(hs, as_) => onPredictionSaved(match.id, hs, as_)}
+                  resolvedTeamNames={resolvedTeamNames}
+                  showGroupLabel
                 />
               ))}
             </div>
@@ -238,11 +332,6 @@ export default function MatchList({
   const predBestThirds = getBestThirds(allPredMatchesByGroup);
   const realBestThirds = getBestThirds(allRealMatchesByGroup);
 
-  function getThirdTeamId(matchesForTable: MatchForTable[]): string | null {
-    const standings = computeStandings(matchesForTable);
-    return standings[2]?.teamId ?? null;
-  }
-
   const predThirdId = getThirdTeamId(allPredMatchesByGroup[activeGroup] ?? []);
   const realThirdId = getThirdTeamId(allRealMatchesByGroup[activeGroup] ?? []);
 
@@ -255,6 +344,9 @@ export default function MatchList({
   }, {} as Record<string, Match[]>);
 
   const hasKnockout = knockoutMatches.length > 0;
+
+  // Resolve real team names for knockout placeholder slots
+  const resolvedTeamNames = buildResolvedTeamNames(matchesByGroup);
 
   return (
     <div>
@@ -306,6 +398,7 @@ export default function MatchList({
           predictionsMap={predictionsMap}
           sessionPredictions={sessionPredictions}
           onPredictionSaved={onPredictionSaved}
+          resolvedTeamNames={resolvedTeamNames}
         />
       )}
 
@@ -355,6 +448,7 @@ export default function MatchList({
                 match={match}
                 prediction={sessionPredictions[match.id] ?? predictionsMap[match.id]}
                 onSaved={(hs, as_) => onPredictionSaved(match.id, hs, as_)}
+                resolvedTeamNames={resolvedTeamNames}
               />
             ))}
           </div>
@@ -387,6 +481,7 @@ export default function MatchList({
                     match={match}
                     prediction={sessionPredictions[match.id] ?? predictionsMap[match.id]}
                     onSaved={(hs, as_) => onPredictionSaved(match.id, hs, as_)}
+                    resolvedTeamNames={resolvedTeamNames}
                   />
                 ))}
               </div>
@@ -398,14 +493,54 @@ export default function MatchList({
   );
 }
 
+// ── Match Card ────────────────────────────────────────────────────────────────
+
+/**
+ * Returns whether a team code is a knockout placeholder (not a real group-stage team).
+ * Placeholder codes: "A1", "B2", "3rd-ABCDF", "GP73", "PP101", etc.
+ */
+function isPlaceholderCode(code: string): boolean {
+  if (/^[A-L][12]$/.test(code)) return true;
+  if (code.startsWith("3rd-")) return true;
+  if (code.startsWith("GP") || code.startsWith("PP")) return true;
+  return false;
+}
+
+/**
+ * Returns a short human-readable label for a placeholder slot,
+ * shown under the resolved team name.
+ * e.g. "A1" → "1° Grupo A", "3rd-ABCDF" → "3° A/B/C/D/F", "GP73" → "G. P73", "PP101" → "P. P101"
+ */
+function slotLabel(code: string): string {
+  // "A1" → "1° Grupo A",  "B2" → "2° Grupo B"
+  const groupRankMatch = code.match(/^([A-L])([12])$/);
+  if (groupRankMatch) {
+    const pos = groupRankMatch[2] === "1" ? "1°" : "2°";
+    return `${pos} Grupo ${groupRankMatch[1]}`;
+  }
+  // "3rd-ABCDF" → "3° A/B/C/D/F"
+  if (code.startsWith("3rd-")) {
+    const groups = code.replace("3rd-", "").split("").join("/");
+    return `3° ${groups}`;
+  }
+  // "GP73" → "G. P73",  "PP101" → "P. P101"
+  if (code.startsWith("GP")) return `G. P${code.slice(2)}`;
+  if (code.startsWith("PP")) return `P. P${code.slice(2)}`;
+  return code;
+}
+
 function MatchCard({
   match,
   prediction,
   onSaved,
+  resolvedTeamNames,
+  showGroupLabel = false,
 }: {
   match: Match;
   prediction?: { homeScore: number; awayScore: number };
   onSaved: (homeScore: number, awayScore: number) => void;
+  resolvedTeamNames: Record<string, string>;
+  showGroupLabel?: boolean;
 }) {
   const [home, setHome] = useState<number | "">(prediction?.homeScore ?? "");
   const [away, setAway] = useState<number | "">(prediction?.awayScore ?? "");
@@ -415,6 +550,22 @@ function MatchCard({
 
   const matchDate = new Date(match.matchDate);
   const isPast = matchDate < new Date();
+
+  // Resolve display names for knockout placeholder teams
+  const homeIsPlaceholder = isPlaceholderCode(match.homeTeam.code);
+  const awayIsPlaceholder = isPlaceholderCode(match.awayTeam.code);
+
+  const resolvedHomeName = homeIsPlaceholder
+    ? (resolvedTeamNames[match.homeTeam.code] ?? match.homeTeam.name)
+    : match.homeTeam.name;
+
+  const resolvedAwayName = awayIsPlaceholder
+    ? (resolvedTeamNames[match.awayTeam.code] ?? match.awayTeam.name)
+    : match.awayTeam.name;
+
+  // Whether we have a real resolved name (different from the placeholder stored name)
+  const homeResolved = homeIsPlaceholder && !!resolvedTeamNames[match.homeTeam.code];
+  const awayResolved = awayIsPlaceholder && !!resolvedTeamNames[match.awayTeam.code];
 
   const { useEffect } = require("react");
 
@@ -520,10 +671,19 @@ function MatchCard({
 
         {/* Date / Time */}
         <div className="flex justify-between md:justify-start items-center md:w-28 md:shrink-0 text-xs text-gray-400 font-medium">
-          <div>
-            {matchDate.toLocaleDateString("es", { day: "numeric", month: "short", timeZone: "America/Guayaquil" })}
-            <span className="mx-1.5">•</span>
-            {matchDate.toLocaleTimeString("es", { hour: "2-digit", minute: "2-digit", timeZone: "America/Guayaquil" })}
+          <div className="flex flex-col gap-0.5">
+            <span>
+              {matchDate.toLocaleDateString("es", { day: "numeric", month: "short", timeZone: "America/Guayaquil" })}
+              <span className="mx-1.5">•</span>
+              {matchDate.toLocaleTimeString("es", { hour: "2-digit", minute: "2-digit", timeZone: "America/Guayaquil" })}
+            </span>
+            {showGroupLabel && (
+              <span className="text-[10px] font-semibold text-cyan-700 bg-cyan-50 px-1.5 py-0.5 rounded w-fit">
+                {match.stage === "GROUP"
+                  ? `Grupo ${match.homeTeam.group}`
+                  : (STAGE_LABELS[match.stage] ?? match.stage)}
+              </span>
+            )}
           </div>
           <div className="md:hidden">
             {renderStatus()}
@@ -534,10 +694,26 @@ function MatchCard({
         <div className="flex items-center justify-between gap-2 md:gap-4 flex-1 text-gray-700">
           {/* Home Team */}
           <div className="flex items-center justify-end gap-2 flex-1 text-right min-w-0">
-            <span className="font-semibold text-xs sm:text-sm md:text-base text-gray-800 truncate" title={match.homeTeam.name}>
-              {match.homeTeam.name}
-            </span>
-            <span className={`${getFlagClass(match.homeTeam.code)} shrink-0 shadow-3xs rounded-xs`} />
+            <div className="flex flex-col items-end min-w-0">
+              <span
+                className={`font-semibold text-xs sm:text-sm md:text-base truncate ${
+                  homeIsPlaceholder && !homeResolved
+                    ? "text-gray-400 italic"
+                    : "text-gray-800"
+                }`}
+                title={resolvedHomeName}
+              >
+                {resolvedHomeName}
+              </span>
+              {homeIsPlaceholder && (
+                <span className="text-[10px] text-gray-400 truncate max-w-full font-medium">
+                  {slotLabel(match.homeTeam.code)}
+                </span>
+              )}
+            </div>
+            {!homeIsPlaceholder && (
+              <span className={`${getFlagClass(match.homeTeam.code)} shrink-0 shadow-3xs rounded-xs`} />
+            )}
           </div>
 
           {/* Score inputs */}
@@ -569,10 +745,26 @@ function MatchCard({
 
           {/* Away Team */}
           <div className="flex items-center justify-start gap-2 flex-1 text-left min-w-0">
-            <span className={`${getFlagClass(match.awayTeam.code)} shrink-0 shadow-3xs rounded-xs`} />
-            <span className="font-semibold text-xs sm:text-sm md:text-base text-gray-800 truncate" title={match.awayTeam.name}>
-              {match.awayTeam.name}
-            </span>
+            {!awayIsPlaceholder && (
+              <span className={`${getFlagClass(match.awayTeam.code)} shrink-0 shadow-3xs rounded-xs`} />
+            )}
+            <div className="flex flex-col min-w-0">
+              <span
+                className={`font-semibold text-xs sm:text-sm md:text-base truncate ${
+                  awayIsPlaceholder && !awayResolved
+                    ? "text-gray-400 italic"
+                    : "text-gray-800"
+                }`}
+                title={resolvedAwayName}
+              >
+                {resolvedAwayName}
+              </span>
+              {awayIsPlaceholder && (
+                <span className="text-[10px] text-gray-400 truncate max-w-full font-medium">
+                  {slotLabel(match.awayTeam.code)}
+                </span>
+              )}
+            </div>
           </div>
         </div>
 
