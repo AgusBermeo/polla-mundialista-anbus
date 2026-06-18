@@ -327,7 +327,7 @@ export default function Chat({ currentUserId, currentUserName }: ChatProps) {
       {/* ── Floating bubble button ───────────────────────────────────────── */}
       <button
         onClick={() => setIsOpen((v) => !v)}
-        className={`fixed bottom-4 right-4 sm:right-6 z-50 w-13 h-13 rounded-full shadow-lg flex items-center justify-center transition-all duration-300 active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:ring-offset-2 ${
+        className={`cursor-pointer fixed bottom-4 right-4 sm:right-6 z-50 w-13 h-13 rounded-full shadow-lg flex items-center justify-center transition-all duration-300 active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:ring-offset-2 ${
           isOpen ? "bg-cyan-700 rotate-0" : "bg-cyan-600 hover:bg-cyan-700 hover:scale-105"
         }`}
         aria-label={isOpen ? "Cerrar chat" : "Abrir chat"}
