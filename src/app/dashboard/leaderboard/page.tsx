@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { createClient } from "@/lib/supabase/server";
 import { getFlagClass } from "@/lib/teamFlags";
+import { resolveKnockoutTeams } from "@/lib/knockoutResolver";
 import Link from "next/link";
 import MatchStatusBadge from "@/components/MatchStatusBadge";
 
@@ -30,6 +31,30 @@ export default async function LeaderboardPage() {
     include: { homeTeam: true, awayTeam: true },
     orderBy: { matchDate: "asc" },
   });
+
+  // Fetch all matches and teams to resolve placeholders
+  const [allMatches, allTeams] = await Promise.all([
+    prisma.match.findMany({
+      include: { homeTeam: true, awayTeam: true },
+    }),
+    prisma.team.findMany(),
+  ]);
+
+  const resolvedTeams = resolveKnockoutTeams(allMatches, allTeams);
+
+  const spotlightMatchHome = spotlightMatch
+    ? (resolvedTeams[spotlightMatch.homeTeam.code] ?? spotlightMatch.homeTeam)
+    : null;
+  const spotlightMatchAway = spotlightMatch
+    ? (resolvedTeams[spotlightMatch.awayTeam.code] ?? spotlightMatch.awayTeam)
+    : null;
+
+  const nextMatchHome = nextMatch
+    ? (resolvedTeams[nextMatch.homeTeam.code] ?? nextMatch.homeTeam)
+    : null;
+  const nextMatchAway = nextMatch
+    ? (resolvedTeams[nextMatch.awayTeam.code] ?? nextMatch.awayTeam)
+    : null;
 
   // My prediction for the next match
   let myNextPred: { homeScore: number; awayScore: number } | null = null;
@@ -103,8 +128,12 @@ export default async function LeaderboardPage() {
             </div>
 
             <div className="flex items-center gap-2 flex-1 min-w-0">
-              <span className={`${getFlagClass(spotlightMatch.homeTeam.code)} shadow-sm rounded-xs shrink-0`} />
-              <span className="font-semibold text-sm text-gray-800 truncate hidden sm:inline">{spotlightMatch.homeTeam.name}</span>
+              {spotlightMatchHome && (
+                <span className={`${getFlagClass(spotlightMatchHome.code)} shadow-sm rounded-xs shrink-0`} />
+              )}
+              {spotlightMatchHome && (
+                <span className="font-semibold text-xs sm:text-sm text-gray-800 truncate">{spotlightMatchHome.name}</span>
+              )}
               {spotlightMatch.isFinished ? (
                 <span className="text-sm font-extrabold text-gray-700 shrink-0">
                   {spotlightMatch.homeScore} – {spotlightMatch.awayScore}
@@ -112,8 +141,12 @@ export default async function LeaderboardPage() {
               ) : (
                 <span className="text-xs text-gray-400 shrink-0">vs</span>
               )}
-              <span className="font-semibold text-sm text-gray-800 truncate hidden sm:inline">{spotlightMatch.awayTeam.name}</span>
-              <span className={`${getFlagClass(spotlightMatch.awayTeam.code)} shadow-sm rounded-xs shrink-0`} />
+              {spotlightMatchAway && (
+                <span className="font-semibold text-xs sm:text-sm text-gray-800 truncate">{spotlightMatchAway.name}</span>
+              )}
+              {spotlightMatchAway && (
+                <span className={`${getFlagClass(spotlightMatchAway.code)} shadow-sm rounded-xs shrink-0`} />
+              )}
               <span className="text-xs text-gray-400 ml-auto shrink-0">
                 {new Date(spotlightMatch.matchDate).toLocaleDateString("es", {
                   day: "numeric", month: "short", timeZone: "America/Guayaquil",
@@ -136,11 +169,19 @@ export default async function LeaderboardPage() {
             </div>
 
             <div className="flex items-center gap-2 flex-1 min-w-0">
-              <span className={`${getFlagClass(nextMatch.homeTeam.code)} shadow-sm rounded-xs shrink-0`} />
-              <span className="font-semibold text-sm text-gray-800 truncate hidden sm:inline">{nextMatch.homeTeam.name}</span>
+              {nextMatchHome && (
+                <span className={`${getFlagClass(nextMatchHome.code)} shadow-sm rounded-xs shrink-0`} />
+              )}
+              {nextMatchHome && (
+                <span className="font-semibold text-xs sm:text-sm text-gray-800 truncate">{nextMatchHome.name}</span>
+              )}
               <span className="text-xs text-gray-400 shrink-0">vs</span>
-              <span className="font-semibold text-sm text-gray-800 truncate hidden sm:inline">{nextMatch.awayTeam.name}</span>
-              <span className={`${getFlagClass(nextMatch.awayTeam.code)} shadow-sm rounded-xs shrink-0`} />
+              {nextMatchAway && (
+                <span className="font-semibold text-xs sm:text-sm text-gray-800 truncate">{nextMatchAway.name}</span>
+              )}
+              {nextMatchAway && (
+                <span className={`${getFlagClass(nextMatchAway.code)} shadow-sm rounded-xs shrink-0`} />
+              )}
               <span className="text-xs text-gray-400 ml-auto shrink-0">
                 {new Date(nextMatch.matchDate).toLocaleDateString("es", {
                   day: "numeric", month: "short", timeZone: "America/Guayaquil",

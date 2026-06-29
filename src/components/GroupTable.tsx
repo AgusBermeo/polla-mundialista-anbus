@@ -13,76 +13,10 @@ export type MatchForTable = {
   counted: boolean;
 };
 
-export type Standing = {
-  teamId: string;
-  teamName: string;
-  teamCode: string;
-  played: number;
-  won: number;
-  drawn: number;
-  lost: number;
-  gf: number;
-  ga: number;
-  gd: number;
-  points: number;
-  teamFlag: string;
-};
-
-export function computeStandings(matches: MatchForTable[]): Standing[] {
-  const standings: Record<string, Standing> = {};
-
-  for (const match of matches) {
-    for (const team of [match.homeTeam, match.awayTeam]) {
-      if (!standings[team.id]) {
-        standings[team.id] = {
-          teamId: team.id,
-          teamName: team.name,
-          teamCode: team.code,
-          played: 0, won: 0, drawn: 0, lost: 0,
-          gf: 0, ga: 0, gd: 0, points: 0,
-          teamFlag: (team as any).flag ?? "",
-        };
-      }
-    }
-
-    if (!match.counted || match.homeScore === null || match.awayScore === null) continue;
-
-    const home = standings[match.homeTeam.id];
-    const away = standings[match.awayTeam.id];
-    const hs = match.homeScore;
-    const as_ = match.awayScore;
-
-    home.played++; away.played++;
-    home.gf += hs; home.ga += as_;
-    away.gf += as_; away.ga += hs;
-
-    if (hs > as_) {
-      home.won++; home.points += 3; away.lost++;
-    } else if (hs < as_) {
-      away.won++; away.points += 3; home.lost++;
-    } else {
-      home.drawn++; away.drawn++;
-      home.points += 1; away.points += 1;
-    }
-  }
-
-  return Object.values(standings)
-    .map((s) => ({ ...s, gd: s.gf - s.ga }))
-    .sort((a, b) => {
-      if (b.points !== a.points) return b.points - a.points;
-      if (b.gd !== a.gd) return b.gd - a.gd;
-      if (b.gf !== a.gf) return b.gf - a.gf;
-      return a.teamName.localeCompare(b.teamName);
-    });
-}
-
-/** Compare two third-place standings to decide which is "better" (for sorting). */
-export function compareThird(a: Standing, b: Standing): number {
-  if (b.points !== a.points) return b.points - a.points;
-  if (b.gd !== a.gd) return b.gd - a.gd;
-  if (b.gf !== a.gf) return b.gf - a.gf;
-  return a.teamName.localeCompare(b.teamName);
-}
+import { computeStandings, compareThird } from "@/lib/knockoutResolver";
+import type { Standing } from "@/lib/knockoutResolver";
+export { computeStandings, compareThird };
+export type { Standing };
 
 type Accent = "cyan" | "violet";
 
