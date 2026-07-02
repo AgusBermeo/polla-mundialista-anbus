@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import AdminMatchList from "@/components/AdminMatchList";
+import { resolveKnockoutTeams } from "@/lib/knockoutResolver";
 
 
 export default async function AdminPage() {
@@ -11,10 +12,15 @@ export default async function AdminPage() {
   const dbUser = await prisma.user.findUnique({ where: { id: user!.id } });
   if (!dbUser?.isAdmin) redirect("/dashboard");
 
-  const matches = await prisma.match.findMany({
-    include: { homeTeam: true, awayTeam: true },
-    orderBy: { matchDate: "asc" },
-  });
+  const [matches, allTeams] = await Promise.all([
+    prisma.match.findMany({
+      include: { homeTeam: true, awayTeam: true },
+      orderBy: { matchDate: "asc" },
+    }),
+    prisma.team.findMany(),
+  ]);
+
+  const resolvedTeams = resolveKnockoutTeams(matches, allTeams);
 
   return (
     <div>
@@ -22,7 +28,7 @@ export default async function AdminPage() {
       <p className="text-gray-500 text-sm mb-6">
         Ingresa los resultados de los partidos para calcular los puntos automáticamente.
       </p>
-      <AdminMatchList matches={matches} />
+      <AdminMatchList matches={matches} resolvedTeams={resolvedTeams} />
     </div>
   );
 }

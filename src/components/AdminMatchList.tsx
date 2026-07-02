@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { getFlagClass } from "@/lib/teamFlags";
+import { isPlaceholderCode } from "@/lib/knockoutResolver";
 
 type Team = { id: string; name: string; code: string; group: string };
 type Match = {
@@ -15,14 +16,34 @@ type Match = {
   stage: string;
 };
 
+/**
+ * Returns a short human-readable label for a placeholder slot,
+ * shown under the resolved team name.
+ * e.g. "A1" → "1° Grupo A", "3rd-ABCDF" → "3° A/B/C/D/F", "GP73" → "G. P73", "PP101" → "P. P101"
+ */
+function slotLabel(code: string): string {
+  const groupRankMatch = code.match(/^([A-L])([12])$/);
+  if (groupRankMatch) {
+    const pos = groupRankMatch[2] === "1" ? "1°" : "2°";
+    return `${pos} Grupo ${groupRankMatch[1]}`;
+  }
+  if (code.startsWith("3rd-")) {
+    const groups = code.replace("3rd-", "").split("").join("/");
+    return `3° ${groups}`;
+  }
+  if (code.startsWith("GP")) return `G. P${code.slice(2)}`;
+  if (code.startsWith("PP")) return `P. P${code.slice(2)}`;
+  return code;
+}
+
 const STAGE_LABELS: Record<string, string> = {
-  GROUP:         "Fase de grupos",
-  ROUND_OF_32:   "Ronda de 32",
-  ROUND_OF_16:   "Octavos de final",
+  GROUP: "Fase de grupos",
+  ROUND_OF_32: "Ronda de 32",
+  ROUND_OF_16: "Octavos de final",
   QUARTER_FINAL: "Cuartos de final",
-  SEMI_FINAL:    "Semifinales",
-  THIRD_PLACE:   "Tercer puesto",
-  FINAL:         "Final",
+  SEMI_FINAL: "Semifinales",
+  THIRD_PLACE: "Tercer puesto",
+  FINAL: "Final",
 };
 
 function getTodayLabel() {
@@ -34,7 +55,13 @@ function getTodayLabel() {
   });
 }
 
-export default function AdminMatchList({ matches }: { matches: Match[] }) {
+export default function AdminMatchList({
+  matches,
+  resolvedTeams = {},
+}: {
+  matches: Match[];
+  resolvedTeams?: Record<string, Team>;
+}) {
   const todayLabel = getTodayLabel();
   const todayRef = useRef<HTMLElement | null>(null);
 
@@ -88,9 +115,8 @@ export default function AdminMatchList({ matches }: { matches: Match[] }) {
             ref={isToday ? todayRef : undefined}
           >
             <div className="flex items-center gap-2 mb-3">
-              <h2 className={`text-xs font-bold uppercase tracking-widest capitalize ${
-                isToday ? "text-cyan-700" : "text-gray-400"
-              }`}>
+              <h2 className={`text-xs font-bold uppercase tracking-widest capitalize ${isToday ? "text-cyan-700" : "text-gray-400"
+                }`}>
                 {label}
               </h2>
               {isToday && (
@@ -101,7 +127,7 @@ export default function AdminMatchList({ matches }: { matches: Match[] }) {
             </div>
             <div className="space-y-3">
               {dayMatches.map((match) => (
-                <AdminMatchCard key={match.id} match={match} />
+                <AdminMatchCard key={match.id} match={match} resolvedTeams={resolvedTeams} />
               ))}
             </div>
           </section>
@@ -111,7 +137,13 @@ export default function AdminMatchList({ matches }: { matches: Match[] }) {
   );
 }
 
-function AdminMatchCard({ match }: { match: Match }) {
+function AdminMatchCard({
+  match,
+  resolvedTeams,
+}: {
+  match: Match;
+  resolvedTeams: Record<string, Team>;
+}) {
   const [home, setHome] = useState<number | "">(match.homeScore ?? "");
   const [away, setAway] = useState<number | "">(match.awayScore ?? "");
   const [saving, setSaving] = useState(false);
@@ -119,6 +151,17 @@ function AdminMatchCard({ match }: { match: Match }) {
   const [updated, setUpdated] = useState(0);
 
   const matchDate = new Date(match.matchDate);
+
+  // Resolve display names/flags for knockout placeholder teams (A1, 3rd-ABCDF, GP73, etc.)
+  const resolvedHome = resolvedTeams[match.homeTeam.code] ?? match.homeTeam;
+  const resolvedAway = resolvedTeams[match.awayTeam.code] ?? match.awayTeam;
+
+  const homeIsPlaceholder = isPlaceholderCode(match.homeTeam.code);
+  const awayIsPlaceholder = isPlaceholderCode(match.awayTeam.code);
+
+  // Whether we actually resolved to a real team (not still a placeholder)
+  const homeResolved = homeIsPlaceholder && !isPlaceholderCode(resolvedHome.code);
+  const awayResolved = awayIsPlaceholder && !isPlaceholderCode(resolvedAway.code);
 
   async function handleSave() {
     if (home === "" || away === "") return;
@@ -180,9 +223,8 @@ function AdminMatchCard({ match }: { match: Match }) {
   };
 
   return (
-    <div className={`bg-white rounded-xl border p-4 transition-all duration-200 hover:shadow-xs ${
-      saved ? "border-emerald-200 bg-emerald-50/10" : "border-gray-200"
-    }`}>
+    <div className={`bg-white rounded-xl border p-4 transition-all duration-200 hover:shadow-xs ${saved ? "border-emerald-200 bg-emerald-50/10" : "border-gray-200"
+      }`}>
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 md:gap-4">
 
         {/* Time + stage badge + mobile status */}
@@ -202,13 +244,23 @@ function AdminMatchCard({ match }: { match: Match }) {
         <div className="flex items-center justify-between gap-2 md:gap-4 flex-1 text-gray-700">
           {/* Home team */}
           <div className="flex items-center justify-end gap-2 flex-1 text-right min-w-0">
-            <span
-              className="font-semibold text-xs sm:text-sm md:text-base text-gray-800 truncate"
-              title={match.homeTeam.name}
-            >
-              {match.homeTeam.name}
-            </span>
-            <span className={`${getFlagClass(match.homeTeam.code)} shrink-0 shadow-3xs rounded-xs`} />
+            <div className="flex flex-col items-end min-w-0">
+              <span
+                className={`font-semibold text-xs sm:text-sm md:text-base truncate ${homeIsPlaceholder && !homeResolved ? "text-gray-400 italic" : "text-gray-800"
+                  }`}
+                title={resolvedHome.name}
+              >
+                {resolvedHome.name}
+              </span>
+              {homeIsPlaceholder && (
+                <span className="text-[10px] text-gray-400 truncate max-w-full font-medium">
+                  {slotLabel(match.homeTeam.code)}
+                </span>
+              )}
+            </div>
+            {!isPlaceholderCode(resolvedHome.code) && (
+              <span className={`${getFlagClass(resolvedHome.code)} shrink-0 shadow-3xs rounded-xs`} />
+            )}
           </div>
 
           {/* Score inputs */}
@@ -240,13 +292,23 @@ function AdminMatchCard({ match }: { match: Match }) {
 
           {/* Away team */}
           <div className="flex items-center justify-start gap-2 flex-1 text-left min-w-0">
-            <span className={`${getFlagClass(match.awayTeam.code)} shrink-0 shadow-3xs rounded-xs`} />
-            <span
-              className="font-semibold text-xs sm:text-sm md:text-base text-gray-800 truncate"
-              title={match.awayTeam.name}
-            >
-              {match.awayTeam.name}
-            </span>
+            {!isPlaceholderCode(resolvedAway.code) && (
+              <span className={`${getFlagClass(resolvedAway.code)} shrink-0 shadow-3xs rounded-xs`} />
+            )}
+            <div className="flex flex-col min-w-0">
+              <span
+                className={`font-semibold text-xs sm:text-sm md:text-base truncate ${awayIsPlaceholder && !awayResolved ? "text-gray-400 italic" : "text-gray-800"
+                  }`}
+                title={resolvedAway.name}
+              >
+                {resolvedAway.name}
+              </span>
+              {awayIsPlaceholder && (
+                <span className="text-[10px] text-gray-400 truncate max-w-full font-medium">
+                  {slotLabel(match.awayTeam.code)}
+                </span>
+              )}
+            </div>
           </div>
         </div>
 
