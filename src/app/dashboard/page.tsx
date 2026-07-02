@@ -1,6 +1,8 @@
 import { prisma } from "@/lib/prisma";
 import { createClient } from "@/lib/supabase/server";
 import { getFlagClass } from "@/lib/teamFlags";
+import { resolveKnockoutTeams, isPlaceholderCode } from "@/lib/knockoutResolver";
+
 import Link from "next/link";
 
 
@@ -10,21 +12,28 @@ export default async function DashboardPage() {
 
   const now = new Date();
 
-  const [dbUser, totalMatches, leaderboard, finishedMatches] = await Promise.all([
-    prisma.user.findUnique({
-      where: { id: user!.id },
-      include: { predictions: true },
-    }),
-    prisma.match.count(),
-    prisma.user.findMany({
-      include: { predictions: true },
-      orderBy: { createdAt: "asc" },
-    }),
-    prisma.match.findMany({
-      where: { isFinished: true },
-      orderBy: { matchDate: "desc" },
-    }),
-  ]);
+  const [dbUser, totalMatches, leaderboard, finishedMatches, allMatchesForResolve, allTeams] =
+    await Promise.all([
+      prisma.user.findUnique({
+        where: { id: user!.id },
+        include: { predictions: true },
+      }),
+      prisma.match.count(),
+      prisma.user.findMany({
+        include: { predictions: true },
+        orderBy: { createdAt: "asc" },
+      }),
+      prisma.match.findMany({
+        where: { isFinished: true },
+        orderBy: { matchDate: "desc" },
+      }),
+      prisma.match.findMany({
+        include: { homeTeam: true, awayTeam: true },
+      }),
+      prisma.team.findMany(),
+    ]);
+
+  const resolvedTeams = resolveKnockoutTeams(allMatchesForResolve, allTeams);
 
   const totalPoints = dbUser?.predictions.reduce((sum, p) => sum + p.points, 0) ?? 0;
   const totalPredictions = dbUser?.predictions.length ?? 0;
@@ -72,6 +81,13 @@ export default async function DashboardPage() {
     include: { homeTeam: true, awayTeam: true },
     orderBy: { matchDate: "desc" },
   });
+
+  const spotlightHome = spotlightMatch
+    ? (resolvedTeams[spotlightMatch.homeTeam.code] ?? spotlightMatch.homeTeam)
+    : null;
+  const spotlightAway = spotlightMatch
+    ? (resolvedTeams[spotlightMatch.awayTeam.code] ?? spotlightMatch.awayTeam)
+    : null;
 
   // My prediction for the spotlight match
   let mySpotlightPred: { homeScore: number; awayScore: number } | null = null;
@@ -239,9 +255,11 @@ export default async function DashboardPage() {
 
             {/* Teams + score */}
             <div className="flex items-center gap-2 flex-1 min-w-0">
-              <span className={`${getFlagClass(spotlightMatch.homeTeam.code)} shadow-sm rounded-xs shrink-0`} />
+              {spotlightHome && !isPlaceholderCode(spotlightHome.code) && (
+                <span className={`${getFlagClass(spotlightHome.code)} shadow-sm rounded-xs shrink-0`} />
+              )}
               <span className="font-semibold text-sm text-gray-800 hidden sm:inline truncate">
-                {spotlightMatch.homeTeam.name}
+                {spotlightHome?.name}
               </span>
               {spotlightMatch.isFinished ? (
                 <span className="text-sm font-extrabold text-gray-700 shrink-0">
@@ -251,9 +269,11 @@ export default async function DashboardPage() {
                 <span className="text-xs text-gray-400 shrink-0">vs</span>
               )}
               <span className="font-semibold text-sm text-gray-800 hidden sm:inline truncate">
-                {spotlightMatch.awayTeam.name}
+                {spotlightAway?.name}
               </span>
-              <span className={`${getFlagClass(spotlightMatch.awayTeam.code)} shadow-sm rounded-xs shrink-0`} />
+              {spotlightAway && !isPlaceholderCode(spotlightAway.code) && (
+                <span className={`${getFlagClass(spotlightAway.code)} shadow-sm rounded-xs shrink-0`} />
+              )}
             </div>
 
             {/* Date */}
@@ -270,12 +290,12 @@ export default async function DashboardPage() {
             {mySpotlightPred ? (
               <span
                 className={`inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-lg ${predResult === "exact"
-                    ? "bg-emerald-100 text-emerald-700"
-                    : predResult === "winner"
-                      ? "bg-cyan-50 text-cyan-700 border border-cyan-100"
-                      : predResult === "wrong"
-                        ? "bg-red-50 text-red-500"
-                        : "bg-gray-100 text-gray-600"
+                  ? "bg-emerald-100 text-emerald-700"
+                  : predResult === "winner"
+                    ? "bg-cyan-50 text-cyan-700 border border-cyan-100"
+                    : predResult === "wrong"
+                      ? "bg-red-50 text-red-500"
+                      : "bg-gray-100 text-gray-600"
                   }`}
               >
                 {mySpotlightPred.homeScore} – {mySpotlightPred.awayScore}
@@ -309,13 +329,14 @@ export default async function DashboardPage() {
             {next4Matches.map((match) => {
               const matchDate = new Date(match.matchDate);
               const hasPrediction = predictedMatchIds.has(match.id);
+              const resolvedHome = resolvedTeams[match.homeTeam.code] ?? match.homeTeam;
+              const resolvedAway = resolvedTeams[match.awayTeam.code] ?? match.awayTeam;
               return (
                 <Link
                   key={match.id}
                   href="/dashboard/matches"
                   className="flex items-center gap-3 p-3 rounded-xl border border-gray-100 hover:border-cyan-200 hover:bg-cyan-50/30 transition-all group"
                 >
-                  {/* Date/time column */}
                   <div className="flex flex-col items-center justify-center bg-slate-100 rounded-lg px-3 py-2 shrink-0 min-w-[52px]">
                     <span className="text-[10px] font-semibold text-gray-400 uppercase">
                       {matchDate.toLocaleDateString("es", { month: "short", timeZone: "America/Guayaquil" })}
@@ -328,19 +349,21 @@ export default async function DashboardPage() {
                     </span>
                   </div>
 
-                  {/* Teams column */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5 mb-1">
-                      <span className={`${getFlagClass(match.homeTeam.code)} shrink-0 shadow-sm rounded-sm`} style={{ fontSize: "0.9rem" }} />
-                      <span className="text-sm font-semibold text-gray-800 truncate">{match.homeTeam.name}</span>
+                      {!isPlaceholderCode(resolvedHome.code) && (
+                        <span className={`${getFlagClass(resolvedHome.code)} shrink-0 shadow-sm rounded-sm`} style={{ fontSize: "0.9rem" }} />
+                      )}
+                      <span className="text-sm font-semibold text-gray-800 truncate">{resolvedHome.name}</span>
                     </div>
                     <div className="flex items-center gap-1.5">
-                      <span className={`${getFlagClass(match.awayTeam.code)} shrink-0 shadow-sm rounded-sm`} style={{ fontSize: "0.9rem" }} />
-                      <span className="text-sm font-semibold text-gray-800 truncate">{match.awayTeam.name}</span>
+                      {!isPlaceholderCode(resolvedAway.code) && (
+                        <span className={`${getFlagClass(resolvedAway.code)} shrink-0 shadow-sm rounded-sm`} style={{ fontSize: "0.9rem" }} />
+                      )}
+                      <span className="text-sm font-semibold text-gray-800 truncate">{resolvedAway.name}</span>
                     </div>
                   </div>
 
-                  {/* Status badge */}
                   <div className="shrink-0 flex flex-col items-end gap-1">
                     <span className="text-[10px] font-medium text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
                       Grupo {match.homeTeam.group}
@@ -383,6 +406,8 @@ export default async function DashboardPage() {
           <div className="space-y-3">
             {upcomingMatches.map((match) => {
               const matchDate = new Date(match.matchDate);
+              const resolvedHome = resolvedTeams[match.homeTeam.code] ?? match.homeTeam;
+              const resolvedAway = resolvedTeams[match.awayTeam.code] ?? match.awayTeam;
               return (
                 <div
                   key={match.id}
@@ -396,8 +421,16 @@ export default async function DashboardPage() {
                         timeZone: "America/Guayaquil",
                       })}
                     </span>
-                    <span className="text-sm font-medium text-gray-500">
-                      {match.homeTeam.name} vs {match.awayTeam.name}
+                    <span className="text-sm font-medium text-gray-500 flex items-center gap-1.5">
+                      {!isPlaceholderCode(resolvedHome.code) && (
+                        <span className={`${getFlagClass(resolvedHome.code)} shrink-0 shadow-3xs rounded-xs`} />
+                      )}
+                      {resolvedHome.name}
+                      <span className="text-gray-300">vs</span>
+                      {!isPlaceholderCode(resolvedAway.code) && (
+                        <span className={`${getFlagClass(resolvedAway.code)} shrink-0 shadow-3xs rounded-xs`} />
+                      )}
+                      {resolvedAway.name}
                     </span>
                   </div>
                   <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-1 rounded-full">
